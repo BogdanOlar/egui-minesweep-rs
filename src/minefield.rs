@@ -21,6 +21,9 @@ pub enum SpotState {
 
     /// This spot has been flagged as being a mine
     Flagged,
+
+    /// This spot is an exploded mine
+    Exploded,
 }
 
 /// Spot struct describing the characteristics of the minefield at a particular position
@@ -31,12 +34,12 @@ pub struct Spot {
 }
 
 impl Spot {
-    pub fn kind(&self) -> &SpotKind {
-        &self.kind
+    pub fn kind(&self) -> SpotKind {
+        self.kind
     }
 
-    pub fn state(&self) -> &SpotState {
-        &self.state
+    pub fn state(&self) -> SpotState {
+        self.state
     }
 }
 
@@ -104,6 +107,8 @@ impl Minefield {
         // Limit the max number of mines to the number of available spots
         let mines = if mines as usize <= spot_count { mines as i32 } else { spot_count as i32 };
 
+        self.mines = mines as i32;
+
         // Add mines to minefield
 
         // We could just start randomly picking indices in the field and hope we haven't picked them before, but if a
@@ -116,7 +121,7 @@ impl Minefield {
         let mut rng = rand::thread_rng();
 
         // Place mines
-        for _ in 0..mines {
+        for _ in 0..self.mines {
             let index_rm = rng.gen_range(0..spots_remaining.len());
             self.place_mine(spots_remaining.swap_remove(index_rm));
         }
@@ -129,10 +134,8 @@ impl Minefield {
         if let Some(index) = self.spot_index(x as i32, y as i32) {
             match self.field[index].kind {
                 SpotKind::Mine => {
-                    // Reveal the spot
-                    self.field[index].state = SpotState::Revealed;
-
                     // Stepped on a mine
+                    self.field[index].state = SpotState::Exploded;
                     StepResult::Boom
                 },
 
@@ -211,7 +214,7 @@ impl Minefield {
                     self.field[index].state = SpotState::Hidden;
                     flag_count_diff = -1
                 },
-                SpotState::Revealed => {},
+                _ => {},
             }
         } 
 
@@ -310,7 +313,7 @@ impl Minefield {
 
                 // the index is within the field vector
                 (*i >= 0 && *i < index_max)
-                // the index corresponds to a neighbor
+                // the index corresponds to a neighbor, not self
                 && (*i != base_index)
 
                 // the index corresponds to a set of coordinates which is within 1 unit far from the coords of `base_index`
@@ -651,6 +654,9 @@ impl Minefield {
                         SpotState::Flagged => {
                             print!(" ⚐");
                         },
+                        SpotState::Exploded => {
+                            print!(" 💥");
+                        }
                         SpotState::Revealed => {
                             match minefield.field[index].kind {
                                 SpotKind::Mine => {
