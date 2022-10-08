@@ -513,7 +513,7 @@ impl Minefield {
         // 3 [ • • • ]
         assert_eq!(step_result, StepResult::Boom);
         let step_index = minefield.spot_index(step_x as i32, step_y as i32).unwrap();
-        assert_eq!(minefield.field[step_index].state, SpotState::Revealed);
+        assert_eq!(minefield.field[step_index].state, SpotState::Exploded);
         for neighbor_index in minefield.neighbor_indices(step_index) {
             let n_coords = minefield.spot_coords(neighbor_index);
             let expected_spot_state= if n_coords == (2, 1) { SpotState::Hidden} else { SpotState::Revealed };
