@@ -97,10 +97,10 @@ impl Minefield {
         // Add mines to minefield
 
         // We could just start randomly picking indices in the field and hope we haven't picked them before, but if a
-        // user desires a field full of mines, then waiting for the last mines to be placed might take a long time 
-        // (e.g. if the field is very large). 
+        // user desires a field full of mines, then waiting for the last mines to be placed might take a long time
+        // (e.g. if the field is very large).
         // That's a problem for an immediate GUI.
-        // So, instead, we'll use some memory in order to ensure that the user can step on a mine as soon as humanly 
+        // So, instead, we'll use some memory in order to ensure that the user can step on a mine as soon as humanly
         // possible.
         let mut spots_remaining: Vec<usize> = (0..spot_count).collect();
         let mut rng = rand::thread_rng();
@@ -160,8 +160,8 @@ impl Minefield {
                         }
                     }
                 }
-            }                            
-        }        
+            }
+        }
     }
 
     /// Place a mine at a given field index, and update neighboring spots
@@ -188,23 +188,23 @@ impl Minefield {
         assert!(index < self.field.len());
 
         let width = self.width;
-        
+
         let base_index = index as i32;
         let index_start = base_index - (width + 1);
         let index_end = base_index + (width + 1);
-        
+
         let high_index_start = index_start;
         let high_index_end = index_start + 2;
         let high_iter = high_index_start..=high_index_end;
-        
+
         let mid_index_start = base_index - 1;
-        let mid_index_end = base_index + 1;        
+        let mid_index_end = base_index + 1;
         let mid_iter = mid_index_start..=mid_index_end;
-        
+
         let low_index_start = index_end - 2;
         let low_index_end = index_end;
         let low_iter = low_index_start..=low_index_end;
-        
+
         let index_max = self.field.len() as i32;
         let y = base_index / width;
         let x = base_index % width;
@@ -214,13 +214,13 @@ impl Minefield {
             .filter(move |i| {
                 let ny = *i / width;
                 let nx = *i % width;
-                
+
                 // the index is within the field vector
                 (*i >= 0 && *i < index_max)
                 // the index corresponds to a neighbor
                 && (*i != base_index)
-                
-                // the index corresponds to a set of coordinates which is within 1 unit far from the coords of `base_index` 
+
+                // the index corresponds to a set of coordinates which is within 1 unit far from the coords of `base_index`
                 && ((ny >= (y - 1)) && (ny <= (y + 1)))
                 && ((nx >= (x - 1)) && (nx <= (x + 1)))
             })
@@ -251,7 +251,7 @@ impl Minefield {
  #[cfg(test)]
  mod tests {
      use super::*;
- 
+
      #[test]
      fn new_minefield() {
         // Create empty test minefield:
@@ -268,7 +268,7 @@ impl Minefield {
         for spot in &minefield.field {
             assert_eq!(spot.kind, SpotKind::Empty(0));
             assert_eq!(spot.state, SpotState::Hidden);
-        }              
+        }
      }
 
      #[test]
@@ -288,7 +288,7 @@ impl Minefield {
         let mine_x = 2;
         let mine_y = 0;
         minefield.place_mine(minefield.spot_index(mine_x, mine_y).unwrap());
-        
+
         let mine_index = minefield.spot_index(mine_x, mine_y);
         assert_eq!(mine_index, Some(2));
 
@@ -299,9 +299,9 @@ impl Minefield {
         // Were the neighbors updated correctly?
         for neighbor_index in minefield.neighbor_indices(mine_index) {
             assert_eq!(minefield.field[neighbor_index].kind, SpotKind::Empty(1));
-        }      
+        }
 
-        // Place another mine  
+        // Place another mine
         //     0 1 2
         // 0 [   1 ☢ ]
         // 1 [   1 1 ]
@@ -321,9 +321,9 @@ impl Minefield {
         // Were the neighbors updated correctly?
         for neighbor_index in minefield.neighbor_indices(mine_index) {
             assert_eq!(minefield.field[neighbor_index].kind, SpotKind::Empty(1));
-        }  
+        }
 
-        // Place another mine  
+        // Place another mine
         //     0 1 2
         // 0 [ 1 2 ☢ ]
         // 1 [ ☢ 2 1 ]
@@ -345,7 +345,7 @@ impl Minefield {
             let n_coords = minefield.spot_coords(neighbor_index);
             let expected_mine_count = if n_coords == (0, 0) { 1 } else { 2 };
             assert_eq!(minefield.field[neighbor_index].kind, SpotKind::Empty(expected_mine_count));
-        }  
+        }
      }
 
      #[test]
@@ -353,14 +353,14 @@ impl Minefield {
          // Create empty minefield
          let width = 3;
          let height = 4;
-         let mut minefield = Minefield::new(width, height);      
-         
+         let mut minefield = Minefield::new(width, height);
+
         // Place mines
         //     0 1 2
         // 0 [   1 ☢ ]
         // 1 [   1 1 ]
         // 2 [ 1 1   ]
-        // 3 [ ☢ 1   ]         
+        // 3 [ ☢ 1   ]
         let mine_x = 2;
         let mine_y = 0;
         minefield.place_mine(minefield.spot_index(mine_x, mine_y).unwrap());
@@ -384,7 +384,7 @@ impl Minefield {
         assert_eq!(minefield.field[step_index].state, SpotState::Revealed);
         for neighbor_index in minefield.neighbor_indices(step_index) {
             assert_eq!(minefield.field[neighbor_index].state, SpotState::Hidden);
-        }  
+        }
 
         // Step on spot with no neighboring mines
         let step_x = 0;
@@ -402,7 +402,7 @@ impl Minefield {
         assert_eq!(minefield.field[step_index].state, SpotState::Revealed);
         for neighbor_index in minefield.neighbor_indices(step_index) {
             assert_eq!(minefield.field[neighbor_index].state, SpotState::Revealed);
-        }          
+        }
 
         // Step on mine
         let step_x = 2;
@@ -438,10 +438,10 @@ impl Minefield {
         // 6 [         1 1 2 1 1   ]
         // 7 [         1 ☢ 2 ☢ 1   ]
         // 8 [         1 1 2 1 1   ]
-        // 9 [                     ]        
+        // 9 [                     ]
         let width = 10;
         let height = 10;
-        let mut minefield = Minefield::new(width, height);          
+        let mut minefield = Minefield::new(width, height);
 
         let mine_coords = [(2, 4), (5, 7), (7, 7), (9, 4), (6, 3), (3, 0)];
         for (x, y) in mine_coords {
@@ -459,7 +459,7 @@ impl Minefield {
         // 6 [ • • • • • • • • • • ]
         // 7 [ • • • • • • • • • • ]
         // 8 [ • • • • • • • • • • ]
-        // 9 [ • • • • • • • • • • ]        
+        // 9 [ • • • • • • • • • • ]
         let flag_x = 5;
         let flag_y = 1;
         let flag_index = minefield.spot_index(flag_x, flag_y).unwrap();
@@ -476,7 +476,7 @@ impl Minefield {
         // 6 [         1 1 2 1 1   ]
         // 7 [         1 • • • 1   ]
         // 8 [         1 1 2 1 1   ]
-        // 9 [                     ]        
+        // 9 [                     ]
         let step_x = 9;
         let step_y = 6;
         let step_result = minefield.step(step_x, step_y);
@@ -557,7 +557,7 @@ impl Minefield {
                         },
                         SpotState::Flagged => {
                             print!(" ⚐");
-                        },                        
+                        },
                         SpotState::Revealed => {
                             match minefield.field[index].kind {
                                 SpotKind::Mine => {
