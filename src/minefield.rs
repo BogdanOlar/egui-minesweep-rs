@@ -161,6 +161,8 @@ impl Minefield {
     /// then this method reveals all neighboring hidden spots. If the user misplaced a flag, then this will result in a
     /// `Boom`.
     pub fn try_resolve_step(&mut self, x: u16, y: u16) -> StepResult {
+        let mut step_result = StepResult::Invalid;
+
         if let Some(index) = self.spot_index(x as i32, y as i32) {
             if let SpotState::Revealed = self.field[index].state {
                 if let SpotKind::Empty(n) = self.field[index].kind {
@@ -174,24 +176,24 @@ impl Minefield {
                             .sum();
                         
                         if n == flag_count {
+                            step_result = StepResult::Phew;
+
                             for neighbor_index in self.neighbor_indices(index) {
                                 if self.field[neighbor_index].state == SpotState::Hidden {
                                     let (x, y) = self.spot_coords(neighbor_index);
-                                    let step_result = self.step(x as u16, y as u16);
-                                    if step_result == StepResult::Boom {
-                                        return step_result;
+                                    step_result = self.step(x as u16, y as u16);
+                                    if step_result != StepResult::Phew {
+                                        break;
                                     }
                                 }
                             }
-
-                            return  StepResult::Phew;
                         }
                     }
                 }
             }
         }
 
-        StepResult::Invalid
+        step_result
     }
 
     // Set a flag on a hidden spot, or clear the flag if the spot had one
