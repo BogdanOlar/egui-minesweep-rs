@@ -30,6 +30,16 @@ pub struct Spot {
     state: SpotState,
 }
 
+impl Spot {
+    pub fn kind(&self) -> &SpotKind {
+        &self.kind
+    }
+
+    pub fn state(&self) -> &SpotState {
+        &self.state
+    }
+}
+
 impl Default for Spot {
     fn default() -> Self {
         Self { kind: SpotKind::Empty(0), state: SpotState::Hidden }
@@ -142,6 +152,41 @@ impl Minefield {
         } else {
             // Step is outside minefield
             StepResult::Invalid
+        }
+    }
+
+    // Set a flag on a hidden spot, or clear the flag if the spot had one
+    pub fn flag(&mut self, x: u16, y: u16) {
+        if let Some(index) = self.spot_index(x as i32, y as i32) {
+            match self.field[index].state {
+                SpotState::Hidden => {
+                    self.field[index].state = SpotState::Flagged;
+                },
+                SpotState::Flagged => {
+                    self.field[index].state = SpotState::Hidden;
+                },
+                SpotState::Revealed => {},
+            }
+        }
+    }
+
+    pub fn width(&self) -> u16 {
+        self.width as u16
+    }
+
+    pub fn height(&self) -> u16 {
+        self.height as u16
+    }
+
+    pub fn mines(&self) -> u16 {
+        self.mines as u16
+    }    
+
+    pub fn spot(&self, x: u16, y: u16) -> Option<&Spot> {
+        if let Some(index) = self.spot_index(x as i32, y as i32) {
+            Some(&self.field[index])
+        } else {
+            None
         }
     }
 
