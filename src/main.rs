@@ -1,6 +1,6 @@
-use eframe::{egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense}, epaint::Color32, Frame, NativeOptions, App};
+use eframe::{egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense, Direction}, epaint::Color32, Frame, NativeOptions, App};
 use egui_extras::{TableBuilder, Size};
-use minefield::{Minefield, SpotState, StepResult};
+use minefield::{Minefield, SpotState, StepResult, SpotKind};
 
 mod minefield;
 
@@ -87,8 +87,9 @@ impl MinesweepRsApp {
 
     fn render_minefield(&mut self, ctx: &Context, _frame: &mut Frame) {
         CentralPanel::default().show(ctx, |ui| {
-            let size = 20.0;
+            let size = 30.0;
             TableBuilder::new(ui)
+                .cell_layout(Layout::centered_and_justified(Direction::LeftToRight))
                 .columns(Size::Absolute { initial: size - 2.0, range: (size - 2.0, size - 2.0) }, self.minefield.width() as usize)
                 .body(|mut body| {
                     for y in 0..self.minefield.height() {
@@ -125,7 +126,7 @@ impl MinesweepRsApp {
             },
             SpotState::Revealed => {
                 match spot.kind() {
-                    minefield::SpotKind::Mine => { 
+                    SpotKind::Mine => { 
                         let response = ui
                             .label(
                             RichText::new("☢")
@@ -134,31 +135,35 @@ impl MinesweepRsApp {
                                 .size(size)
                             );
                     },
-                    minefield::SpotKind::Empty(n) => {
+                    SpotKind::Empty(n) => {
                         let empty_label;
                         
                         if *n > 0 { 
-                            empty_label = ui.label(
-                            RichText::new(format!("{}", n))
+                            empty_label = 
+                                Label::new(RichText::new(format!("{}", n))
                                 .color(Color32::WHITE)
                                 .monospace()
                                 .size(size)
                             );
-                        } else { 
-                            empty_label = ui.label(
-                                RichText::new(" ")
-                                    .color(Color32::WHITE)
-                                    .monospace()
-                                    .size(size)
-                                );
+                        } else {
+                            empty_label = 
+                                Label::new(RichText::new(" ")
+                                .color(Color32::WHITE)
+                                .monospace()
+                                .size(size)
+                            );
                         }
 
-                        let empty_label = empty_label.interact(Sense::click());
-                        if empty_label.clicked() {
-                            println!("clicked on empty");
-                        }
-                        if empty_label.clicked_by(PointerButton::Primary) {
-                            println!("middle on empty");
+                        let empty_label = ui.add(empty_label.sense(Sense::click()));
+
+                        if empty_label.clicked_by(PointerButton::Middle) {
+                            let step_result = self.minefield.try_resolve_step(x, y);
+
+                            if step_result == StepResult::Boom {
+                                // TODO: We stepped on a mine!
+                            }
+
+                            println!("{:?}", step_result);
                         }
                     },
                 }

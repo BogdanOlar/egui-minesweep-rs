@@ -155,6 +155,45 @@ impl Minefield {
         }
     }
 
+    /// Try to reveal neighboring spots, if user has placed enough flags.
+    /// 
+    /// If the current empty revealed spot has `N` neighboring mines (`N > 0`), and if the user has flagged `N` mines, 
+    /// then this method reveals all neighboring hidden spots. If the user misplaced a flag, then this will result in a
+    /// `Boom`.
+    pub fn try_resolve_step(&mut self, x: u16, y: u16) -> StepResult {
+        if let Some(index) = self.spot_index(x as i32, y as i32) {
+            if let SpotState::Revealed = self.field[index].state {
+                if let SpotKind::Empty(n) = self.field[index].kind {
+                    if n > 0 {
+                        let flag_count: i32 = self
+                            .neighbor_indices(index)
+                            .filter(|i| {
+                                self.field[*i].state == SpotState::Flagged
+                            })
+                            .map(|_| 1)
+                            .sum();
+                        
+                        if n == flag_count {
+                            for neighbor_index in self.neighbor_indices(index) {
+                                if self.field[neighbor_index].state == SpotState::Hidden {
+                                    let (x, y) = self.spot_coords(neighbor_index);
+                                    let step_result = self.step(x as u16, y as u16);
+                                    if step_result == StepResult::Boom {
+                                        return step_result;
+                                    }
+                                }
+                            }
+
+                            return  StepResult::Phew;
+                        }
+                    }
+                }
+            }
+        }
+
+        StepResult::Invalid
+    }
+
     // Set a flag on a hidden spot, or clear the flag if the spot had one
     pub fn flag(&mut self, x: u16, y: u16) {
         if let Some(index) = self.spot_index(x as i32, y as i32) {
