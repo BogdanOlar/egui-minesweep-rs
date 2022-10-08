@@ -425,6 +425,84 @@ impl Minefield {
         }
      }
 
+     #[test]
+     fn flood_reveal() {
+        // Create empty bigger minefield
+        //     0 1 2 3 4 5 6 7 8 9
+        // 0 [     1 ☢ 1           ]
+        // 1 [     1 1 1           ]
+        // 2 [           1 1 1     ]
+        // 3 [   1 1 1   1 ☢ 1 1 1 ]
+        // 4 [   1 ☢ 1   1 1 1 1 ☢ ]
+        // 5 [   1 1 1         1 1 ]
+        // 6 [         1 1 2 1 1   ]
+        // 7 [         1 ☢ 2 ☢ 1   ]
+        // 8 [         1 1 2 1 1   ]
+        // 9 [                     ]        
+        let width = 10;
+        let height = 10;
+        let mut minefield = Minefield::new(width, height);          
+
+        let mine_coords = [(2, 4), (5, 7), (7, 7), (9, 4), (6, 3), (3, 0)];
+        for (x, y) in mine_coords {
+            minefield.place_mine(minefield.spot_index(x, y).unwrap());
+        }
+
+        // Place a flag
+        //     0 1 2 3 4 5 6 7 8 9
+        // 0 [ • • • • • • • • • • ]
+        // 1 [ • • • • • ⚐ • • • • ]
+        // 2 [ • • • • • • • • • • ]
+        // 3 [ • • • • • • • • • • ]
+        // 4 [ • • • • • • • • • • ]
+        // 5 [ • • • • • • • • • • ]
+        // 6 [ • • • • • • • • • • ]
+        // 7 [ • • • • • • • • • • ]
+        // 8 [ • • • • • • • • • • ]
+        // 9 [ • • • • • • • • • • ]        
+        let flag_x = 5;
+        let flag_y = 1;
+        let flag_index = minefield.spot_index(flag_x, flag_y).unwrap();
+        minefield.field[flag_index].state = SpotState::Flagged;
+
+        // Step on spot (x=9, y=6)
+        //     0 1 2 3 4 5 6 7 8 9
+        // 0 [     1 • • • • • • • ]
+        // 1 [     1 1 1 ⚐ • • • • ]
+        // 2 [           1 • • • • ]
+        // 3 [   1 1 1   1 • • • • ]
+        // 4 [   1 • 1   1 1 1 1 • ]
+        // 5 [   1 1 1         1 1 ]
+        // 6 [         1 1 2 1 1   ]
+        // 7 [         1 • • • 1   ]
+        // 8 [         1 1 2 1 1   ]
+        // 9 [                     ]        
+        let step_x = 9;
+        let step_y = 6;
+        let step_result = minefield.step(step_x, step_y);
+        assert_eq!(step_result, StepResult::Phew);
+
+        // All mines are still hidden
+        for (x, y) in mine_coords {
+            let index = minefield.spot_index(x, y).unwrap();
+            assert_eq!(minefield.field[index].state, SpotState::Hidden);
+        }
+
+        // Flood revealed the entire maze
+        let index = minefield.spot_index(7, 5).unwrap();
+        assert_eq!(minefield.field[index].state, SpotState::Revealed);
+
+        // Flag is still there
+        let index = minefield.spot_index(flag_x, flag_y).unwrap();
+        assert_eq!(minefield.field[index].state, SpotState::Flagged);
+
+        // Insulated portion of field is still hidden
+        let index = minefield.spot_index(9, 0).unwrap();
+        assert_eq!(minefield.field[index].state, SpotState::Hidden);
+        let index = minefield.spot_index(7, 1).unwrap();
+        assert_eq!(minefield.field[index].state, SpotState::Hidden);
+     }
+
      #[allow(dead_code)]
      fn print_minefield(minefield: &Minefield) {
         // X axis
