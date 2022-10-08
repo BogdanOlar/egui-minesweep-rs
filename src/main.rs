@@ -15,10 +15,19 @@ fn main() {
 
 struct MinesweepRsApp {
     minefield: Minefield,
+    placed_flags: i32,
     game_state: GameState,
 }
 
 impl MinesweepRsApp {
+    const CHAR_MINE: &str = "☢";
+    const COLOUR_MINE: Color32 = Color32::RED;
+    const CHAR_FLAG: &str = "⚐";
+    const COLOUR_FLAG_CORRECT: Color32 = Color32::GREEN;
+    const COLOUR_FLAG_WRONG: Color32 = Color32::RED;
+    const CHARS_EMPTY: [&str; 9] = [" ", "1", "2", "3", "4", "5", "6", "7", "8"];
+    const CHAR_HIDDEN: &str = " ";
+
     fn render_top_panel(&mut self, ctx: &Context, frame: &mut Frame) {
         // define a TopBottomPanel widget
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
@@ -111,7 +120,7 @@ impl MinesweepRsApp {
         match spot.state() {
             SpotState::Hidden => { 
                 let response = ui.button(
-                    RichText::new(" ")
+                    RichText::new(Self::CHAR_HIDDEN)
                         .monospace()
                         .size(size)
                 );
@@ -121,7 +130,7 @@ impl MinesweepRsApp {
                         // TODO: We stepped on a mine!
                     }                    
                 } else if response.clicked_by(PointerButton::Secondary) {
-                    self.minefield.flag(x, y);
+                    self.placed_flags += self.minefield.flag(x, y);
                 }              
             },
             SpotState::Revealed => {
@@ -129,31 +138,20 @@ impl MinesweepRsApp {
                     SpotKind::Mine => { 
                         let response = ui
                             .label(
-                            RichText::new("☢")
-                                .color(Color32::RED)
+                            RichText::new(Self::CHAR_MINE)
+                                .color(Self::COLOUR_MINE)
                                 .monospace()
                                 .size(size)
                             );
                     },
                     SpotKind::Empty(n) => {
-                        let empty_label;
+                        let empty_label = Label::new(
+                            RichText::new(Self::CHARS_EMPTY[*n as usize])
+                            .color(Color32::WHITE)
+                            .monospace()
+                            .size(size)
+                        );
                         
-                        if *n > 0 { 
-                            empty_label = 
-                                Label::new(RichText::new(format!("{}", n))
-                                .color(Color32::WHITE)
-                                .monospace()
-                                .size(size)
-                            );
-                        } else {
-                            empty_label = 
-                                Label::new(RichText::new(" ")
-                                .color(Color32::WHITE)
-                                .monospace()
-                                .size(size)
-                            );
-                        }
-
                         let empty_label = ui.add(empty_label.sense(Sense::click()));
 
                         if empty_label.clicked_by(PointerButton::Middle) {
@@ -170,14 +168,14 @@ impl MinesweepRsApp {
             },
             SpotState::Flagged => { 
                 let response = ui.button(
-                    RichText::new("⚐")
-                        .color(Color32::GREEN)
+                    RichText::new(Self::CHAR_FLAG)
+                        .color(Self::COLOUR_FLAG_CORRECT)
                         .monospace()
                         .size(size)
                 );
 
                 if response.clicked_by(PointerButton::Secondary) {
-                    self.minefield.flag(x, y);
+                    self.placed_flags += self.minefield.flag(x, y);
                 }
             },
         }
@@ -199,6 +197,7 @@ impl Default for MinesweepRsApp {
     fn default() -> Self {
         Self {
             minefield: Minefield::new(10, 10).with_mines(10),
+            placed_flags: 0,
             game_state: GameState::Stopped,
         }
     }

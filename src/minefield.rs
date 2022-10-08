@@ -6,7 +6,7 @@ pub enum SpotKind {
     /// This spot is a mine
     Mine,
 
-    /// This is an empty spot, surrounded by N mines
+    /// This is an empty spot, surrounded by `N` mines
     Empty(i32),
 }
 
@@ -158,8 +158,8 @@ impl Minefield {
     /// Try to reveal neighboring spots, if user has placed enough flags.
     /// 
     /// If the current empty revealed spot has `N` neighboring mines (`N > 0`), and if the user has flagged `N` mines, 
-    /// then this method reveals all neighboring hidden spots. If the user misplaced a flag, then this will result in a
-    /// `Boom`.
+    /// then this method reveals all neighboring hidden spots. If the user misplaced a flag, then this call will result 
+    /// in a `Boom`.
     pub fn try_resolve_step(&mut self, x: u16, y: u16) -> StepResult {
         let mut step_result = StepResult::Invalid;
 
@@ -196,19 +196,26 @@ impl Minefield {
         step_result
     }
 
-    // Set a flag on a hidden spot, or clear the flag if the spot had one
-    pub fn flag(&mut self, x: u16, y: u16) {
+    /// Set a flag on a hidden spot (return `1`), or clear the flag if the spot had one (return `-1`), or do nothing if
+    /// the spot cannot be flagged (return `0`)
+    pub fn flag(&mut self, x: u16, y: u16) -> i32 {
+        let mut flag_count_diff = 0;
+
         if let Some(index) = self.spot_index(x as i32, y as i32) {
             match self.field[index].state {
                 SpotState::Hidden => {
                     self.field[index].state = SpotState::Flagged;
+                    flag_count_diff = 1
                 },
                 SpotState::Flagged => {
                     self.field[index].state = SpotState::Hidden;
+                    flag_count_diff = -1
                 },
                 SpotState::Revealed => {},
             }
-        }
+        } 
+
+        flag_count_diff
     }
 
     pub fn width(&self) -> u16 {
