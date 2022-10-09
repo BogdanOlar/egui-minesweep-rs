@@ -9,7 +9,7 @@ A rust implementation of the popular game, using the [egui](https://github.com/e
 ## TODO
 
 - [X] Linux
-- [] WASM
+- [ ] WASM
 
-- [] `egui` layout
-- [] Config
+- [ ] `egui` layout
+- [ ] Config
