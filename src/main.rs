@@ -75,6 +75,8 @@ impl MinesweepRsApp {
     const WON_COLOR: Color32 = Color32::GREEN;
     const LOST_COLOR: Color32 = Color32::RED;
     const READY_COLOR: Color32 = Color32::GRAY;
+    const FLAG_COUNT_OK_COLOR: Color32 = Color32::GRAY;
+    const FLAG_COUNT_ERR_COLOR: Color32 = Color32::LIGHT_RED;
 
     fn render_top_panel(&mut self, ctx: &Context, _: &mut Frame) {
         // Service app timer
@@ -129,9 +131,14 @@ impl MinesweepRsApp {
                             Label::new(
                             RichText::new("Flags").text_style(TextStyle::Body)
                         ));
+
+                        let flag_count_color = if (self.minefield.mines() as i32 - self.placed_flags) >= 0 { Self::FLAG_COUNT_OK_COLOR } else { Self::FLAG_COUNT_ERR_COLOR };
                         ui.add(
                             Label::new(
-                            RichText::new(format!("{}", self.minefield.mines() as i32 - self.placed_flags)).monospace().text_style(TextStyle::Heading)
+                                RichText::new(format!("{}", self.minefield.mines() as i32 - self.placed_flags))
+                                .color(flag_count_color)
+                                .monospace()
+                                .text_style(TextStyle::Heading)
                         ));
                     });
 
