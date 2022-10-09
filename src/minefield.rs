@@ -202,11 +202,21 @@ impl Minefield {
     /// Check if the minefield has been cleared
     pub fn is_cleared(&self) -> bool {
         for spot in &self.field {
-            if spot.state == SpotState::Hidden || spot.state == SpotState::Exploded {
-                return false;
+            // All mines must be flagged, and all other spots must be revealed
+            match spot.kind {
+                SpotKind::Mine => {
+                    if spot.state != SpotState::Flagged {
+                        return false;
+                    }
+                },
+                SpotKind::Empty(_) => {
+                    if spot.state != SpotState::Revealed {
+                        return false;
+                    }
+                },
             }
         }
-
+        
         true
     }
 
