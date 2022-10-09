@@ -167,26 +167,24 @@ impl Minefield {
         let mut step_result = StepResult::Invalid;
 
         if let Some(index) = self.spot_index(x as i32, y as i32) {
-            if let SpotState::Revealed = self.field[index].state {
-                if let SpotKind::Empty(n) = self.field[index].kind {
-                    if n > 0 {
-                        let flag_count: i32 = self
-                            .neighbor_indices(index)
-                            .filter(|i| {
-                                self.field[*i].state == SpotState::Flagged
-                            })
-                            .count() as i32;
-                        
-                        if n == flag_count {
-                            step_result = StepResult::Phew;
+            if let SpotKind::Empty(n) = self.field[index].kind {
+                if n > 0 && self.field[index].state == SpotState::Revealed {
+                    let flag_count: i32 = self
+                        .neighbor_indices(index)
+                        .filter(|i| {
+                            self.field[*i].state == SpotState::Flagged
+                        })
+                        .count() as i32;
+                    
+                    if n == flag_count {
+                        step_result = StepResult::Phew;
 
-                            for neighbor_index in self.neighbor_indices(index) {
-                                if self.field[neighbor_index].state == SpotState::Hidden {
-                                    let (x, y) = self.spot_coords(neighbor_index);
-                                    step_result = self.step(x as u16, y as u16);
-                                    if step_result != StepResult::Phew {
-                                        break;
-                                    }
+                        for neighbor_index in self.neighbor_indices(index) {
+                            if self.field[neighbor_index].state == SpotState::Hidden {
+                                let (x, y) = self.spot_coords(neighbor_index);
+                                step_result = self.step(x as u16, y as u16);
+                                if step_result != StepResult::Phew {
+                                    break;
                                 }
                             }
                         }
@@ -226,19 +224,17 @@ impl Minefield {
             match self.field[index].state {
                 SpotState::Hidden => {
                     self.field[index].state = SpotState::Flagged;
-                    1
+                    return 1;
                 },
                 SpotState::Flagged => {
                     self.field[index].state = SpotState::Hidden;
-                    -1
+                    return -1;
                 },
-                _ => {
-                    0
-                },
+                _ => {},
             }
-        } else {
-            0
         }
+
+        0
     }
 
     /// The width of the minefield

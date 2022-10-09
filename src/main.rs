@@ -1,5 +1,5 @@
 use eframe::{
-    egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense, Direction, TopBottomPanel}, 
+    egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense, Direction, TopBottomPanel, Window}, 
     epaint::{Color32, Vec2},
     Frame, NativeOptions, App,
 };
@@ -39,6 +39,8 @@ struct MinesweepRsApp {
     timer: AppTimer,
     seconds_lapsed: i32,
     game_state: GameState,
+    show_settings: bool,
+    show_about: bool,
 }
 
 impl App for MinesweepRsApp {
@@ -47,7 +49,9 @@ impl App for MinesweepRsApp {
         ctx.set_debug_on_hover(false);
         
         self.render_top_panel(ctx, frame);
-
+        self.render_bottom_panel(ctx, frame);
+        self.render_about(ctx, frame);
+        self.render_settings(ctx, frame);
         self.render_minefield(ctx, frame);
     }
 }
@@ -68,6 +72,9 @@ impl MinesweepRsApp {
     ];
     const HIDDEN_SPOT_CHAR: &str = " ";
     const HIDDEN_SPOT_COLOR: Color32 = Color32::GRAY;
+    const WON_COLOR: Color32 = Color32::GREEN;
+    const LOST_COLOR: Color32 = Color32::RED;
+    const READY_COLOR: Color32 = Color32::GRAY;
 
     fn render_top_panel(&mut self, ctx: &Context, _: &mut Frame) {
         // Service app timer
@@ -75,7 +82,6 @@ impl MinesweepRsApp {
             self.seconds_lapsed += 1;
         }
                 
-        // define a TopBottomPanel widget
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.add_space(10.);
             egui::menu::bar(ui, |ui| {
@@ -99,6 +105,8 @@ impl MinesweepRsApp {
                         self.seconds_lapsed = 0;
                         self.timer = AppTimer::default();
                         self.game_state = GameState::Ready;
+                        self.show_about = false;
+                        self.show_settings = false;
                     }
                     
                     ui.separator();
@@ -146,23 +154,21 @@ impl MinesweepRsApp {
                 // controls
                 ui.with_layout(Layout::right_to_left(egui::Align::TOP), |ui| {
 
-
-                    // config button
-                    let config_btn = ui.add(
+                    let settings_btn = ui.add(
                         Button::new(
                             RichText::new("🛠").text_style(TextStyle::Heading),
                         )
                     );
 
-                    if config_btn.clicked() {
-                        // TODO:
+                    if settings_btn.clicked() {
+                        self.show_settings = true;
                     }
 
                     // about button
                     let about_btn = ui.add(Button::new(RichText::new("ℹ").text_style(TextStyle::Heading)));
                     
                     if about_btn.clicked() {
-                        // TODO:
+                        self.show_about = true;
                     }
                 });
             });
@@ -170,6 +176,58 @@ impl MinesweepRsApp {
         });
     }
 
+    pub fn render_settings(&mut self, ctx: &Context, _: &mut Frame) {
+        let window = Window::new("Settings").open(&mut self.show_settings);
+        window.show(ctx, |ui| {
+            let info = Label::new("TODO!");
+            ui.add(info);
+        });
+    }
+
+    pub fn render_about(&mut self, ctx: &Context, _: &mut Frame) {
+        let window = Window::new("About Minesweep-Rs").open(&mut self.show_about);
+        window.show(ctx, |ui| {
+            let info = Label::new("A Rust implementation of the popular game, using the `egui` library.");
+            ui.add(info);
+            ui.hyperlink("https://github.com/BogdanOlar/minesweep-rs");
+        });
+    }
+
+    fn render_bottom_panel(&mut self, ctx: &Context, _: &mut Frame) {
+        // define a TopBottomPanel widget
+        TopBottomPanel::bottom("bottom_panel").show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                match self.game_state {
+                    GameState::Ready => {
+                        ui.add(Label::new(
+                            RichText::new("Ready")
+                                .small()
+                                .color(Self::READY_COLOR)
+                                .text_style(TextStyle::Monospace),
+                        ));
+                    },
+                    GameState::Running => {                   
+                    },
+                    GameState::Stopped(is_won) => {
+                        if is_won {
+                            ui.add(Label::new(
+                                RichText::new("You WON!")
+                                    .color(Self::WON_COLOR)
+                                    .text_style(TextStyle::Monospace),
+                            ));
+                        } else {
+                            ui.add(Label::new(
+                                RichText::new("You lost.")
+                                    .color(Self::LOST_COLOR)
+                                    .text_style(TextStyle::Monospace),
+                            ));
+                        }
+                    },
+                }
+            })
+        });
+    }
+    
     fn render_minefield(&mut self, ctx: &Context, _: &mut Frame) {
         CentralPanel::default().show(ctx, |ui| {
             let size = 30.0;
@@ -385,6 +443,8 @@ impl Default for MinesweepRsApp {
             seconds_lapsed: 0,
             timer: AppTimer::default(),
             game_state: GameState::Ready,
+            show_settings: false,
+            show_about: false,
         }
     }
 }
