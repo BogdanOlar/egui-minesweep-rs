@@ -168,14 +168,14 @@ impl MinesweepRsApp {
                     );
 
                     if settings_btn.clicked() {
-                        self.show_settings = true;
+                        self.show_settings = !self.show_settings;
                     }
 
                     // about button
                     let about_btn = ui.add(Button::new(RichText::new("ℹ").text_style(TextStyle::Heading)));
                     
                     if about_btn.clicked() {
-                        self.show_about = true;
+                        self.show_about = !self.show_about;
                     }
                 });
             });
