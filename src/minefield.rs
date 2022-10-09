@@ -199,40 +199,55 @@ impl Minefield {
         step_result
     }
 
+    /// Check if the minefield has been cleared
+    pub fn is_cleared(&self) -> bool {
+        for spot in &self.field {
+            if spot.state == SpotState::Hidden || spot.state == SpotState::Exploded {
+                return false;
+            }
+        }
+
+        true
+    }
+
     /// Set a flag on a hidden spot (return `1`), or clear the flag if the spot had one (return `-1`), or do nothing if
     /// the spot cannot be flagged (return `0`)
-    pub fn flag(&mut self, x: u16, y: u16) -> i32 {
-        let mut flag_count_diff = 0;
-
+    pub fn toggle_flag(&mut self, x: u16, y: u16) -> i32 {
         if let Some(index) = self.spot_index(x as i32, y as i32) {
             match self.field[index].state {
                 SpotState::Hidden => {
                     self.field[index].state = SpotState::Flagged;
-                    flag_count_diff = 1
+                    1
                 },
                 SpotState::Flagged => {
                     self.field[index].state = SpotState::Hidden;
-                    flag_count_diff = -1
+                    -1
                 },
-                _ => {},
+                _ => {
+                    0
+                },
             }
-        } 
-
-        flag_count_diff
+        } else {
+            0
+        }
     }
 
+    /// The width of the minefield
     pub fn width(&self) -> u16 {
         self.width as u16
     }
 
+    /// The height of the minefield
     pub fn height(&self) -> u16 {
         self.height as u16
     }
 
+    /// The number of mines in the minefield
     pub fn mines(&self) -> u16 {
         self.mines as u16
     }    
 
+    /// Get a reference to a spot at the given coordinates in the minefield
     pub fn spot(&self, x: u16, y: u16) -> Option<&Spot> {
         if let Some(index) = self.spot_index(x as i32, y as i32) {
             Some(&self.field[index])
@@ -241,7 +256,7 @@ impl Minefield {
         }
     }
 
-    /// Flood reveal the neighbors of the spot corresponding to the given `index`
+    /// Flood reveal the neighboring empty and hidden spots of the spot corresponding to the given `index`
     fn flood_neighbors_reveal(&mut self, index: usize) {
         let mut neighbors_to_visit = vec![index];
 
