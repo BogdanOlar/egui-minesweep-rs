@@ -1,6 +1,6 @@
 use eframe::{
     egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense, Direction, TopBottomPanel}, 
-    epaint::{Color32},
+    epaint::{Color32, Vec2},
     Frame, NativeOptions, App,
 };
 use egui_extras::{TableBuilder, Size};
@@ -9,17 +9,31 @@ use minefield::{Minefield, SpotState, StepResult, SpotKind};
 mod minefield;
 
 fn main() {
-    let options = NativeOptions::default();
+    let mut options = NativeOptions::default();
+    let app = MinesweepRsApp::default();
+
+    // FIXME: Solve auto resizing
+    let size_x = 38.0;
+    let size_y = 44.0;
+    options.initial_window_size = Some(
+        Vec2::new(
+            size_x * app.minefield.width() as f32, 
+            size_y * app.minefield.height() as f32
+        )
+    );
+
     eframe::run_native(
         "Minesweep-Rs",
         options,
-        Box::new(|_cc| Box::new(MinesweepRsApp::default())),
+        Box::new(|_cc| Box::new(app)),
     );
 }
 
 struct MinesweepRsApp {
     minefield: Minefield,
     placed_flags: i32,
+    seconds_lapsed: i32,
+    seconds_frame: f32,
     game_state: GameState,
 }
 
@@ -27,7 +41,7 @@ impl App for MinesweepRsApp {
     fn update(&mut self, ctx: &Context, frame: &mut Frame) {
         ctx.request_repaint();
         ctx.set_debug_on_hover(false);
-
+        
         self.render_top_panel(ctx, frame);
 
         self.render_minefield(ctx, frame);
@@ -56,18 +70,15 @@ impl MinesweepRsApp {
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.add_space(10.);
             egui::menu::bar(ui, |ui| {
-                // logo
+                
+                // Config and game data
                 ui.with_layout(Layout::left_to_right(egui::Align::TOP), |ui| {
-                    ui.add(Label::new(
-                        RichText::new("📰").text_style(TextStyle::Heading),
-                    ));
-                });
-                // controls
-                ui.with_layout(Layout::right_to_left(egui::Align::TOP), |ui| {
                     // refresh btn
-                    let refresh_btn = ui.add(Button::new(
-                        RichText::new("🔄").text_style(TextStyle::Heading),
-                    ));
+                    let refresh_btn = ui.add(
+                        Button::new(
+                            RichText::new("🔄").text_style(TextStyle::Heading),
+                        )
+                    );
                     
                     if refresh_btn.clicked() {
                         let mines = self.minefield.mines();
@@ -76,24 +87,73 @@ impl MinesweepRsApp {
 
                         self.minefield = Minefield::new(width, height).with_mines(mines);
                         self.placed_flags = 0;
+                        self.seconds_lapsed = 0;
+                        self.seconds_frame = 0.0;
                         self.game_state = GameState::Ready;
                     }
+                    
+                    ui.separator();
+
+                    ui.allocate_ui_with_layout(Vec2::new(10.0, 10.0), Layout::left_to_right(egui::Align::Center), |ui| {
+                        ui.add(
+                            Label::new(
+                            RichText::new("Mines").text_style(TextStyle::Body)
+                        ));
+                        ui.add(
+                            Label::new(
+                            RichText::new(format!("{}", self.minefield.mines())).monospace().text_style(TextStyle::Heading)
+                        ));
+                    });
+
+                    ui.separator();
+
+                    ui.allocate_ui_with_layout(Vec2::new(10.0, 10.0), Layout::left_to_right(egui::Align::Center), |ui| {
+                        ui.add(
+                            Label::new(
+                            RichText::new("Flags").text_style(TextStyle::Body)
+                        ));
+                        ui.add(
+                            Label::new(
+                            RichText::new(format!("{}", self.minefield.mines() as i32 - self.placed_flags)).monospace().text_style(TextStyle::Heading)
+                        ));
+                    });
+
+                    ui.separator();
+
+                    ui.allocate_ui_with_layout(Vec2::new(10.0, 10.0), Layout::left_to_right(egui::Align::Center), |ui| {
+                        ui.add(
+                            Label::new(
+                            RichText::new("Time").text_style(TextStyle::Body)
+                        ));
+                        ui.add(
+                            Label::new(
+                            RichText::new(format!("{}", self.seconds_lapsed)).monospace().text_style(TextStyle::Heading)
+                        ));
+                    });
+
+                    ui.separator();
+                });
+
+                // controls
+                ui.with_layout(Layout::right_to_left(egui::Align::TOP), |ui| {
+
 
                     // config button
-                    let config_btn = ui.add(Button::new(
-                        RichText::new("🛠").text_style(TextStyle::Heading),
-                    ));
+                    let config_btn = ui.add(
+                        Button::new(
+                            RichText::new("🛠").text_style(TextStyle::Heading),
+                        )
+                    );
 
                     if config_btn.clicked() {
                         // TODO:
                     }
 
                     // about button
-                    let about_btn =
-                        ui.add(Button::new(RichText::new("ℹ").text_style(TextStyle::Heading)));
+                    let about_btn = ui.add(Button::new(RichText::new("ℹ").text_style(TextStyle::Heading)));
                     
-                        if about_btn.clicked() {
-                        // self.toggle_about = !self.toggle_about;
+                    if about_btn.clicked() {
+                        // TODO:
                     }
                 });
             });
@@ -305,6 +365,15 @@ impl MinesweepRsApp {
             println!("Running->Stopped (won)");
         }
     }
+
+    fn timer_input(&mut self, seconds: f32) {
+        self.seconds_frame += seconds;
+
+        while self.seconds_frame > 1.0 {
+            self.seconds_lapsed += 1;
+            self.seconds_frame -= 1.0;
+        }
+    }
 }
 
 impl Default for MinesweepRsApp {
@@ -312,6 +381,8 @@ impl Default for MinesweepRsApp {
         Self {
             minefield: Minefield::new(10, 10).with_mines(10),
             placed_flags: 0,
+            seconds_lapsed: 0,
+            seconds_frame: 0.0,
             game_state: GameState::Ready,
         }
     }
