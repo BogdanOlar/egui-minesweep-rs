@@ -24,6 +24,7 @@ fn main() {
             size_y * app.minefield.height() as f32
         )
     );
+    options.resizable = false;
 
     eframe::run_native(
         "Minesweep-Rs",
@@ -45,11 +46,6 @@ impl App for MinesweepRsApp {
         ctx.request_repaint();
         ctx.set_debug_on_hover(false);
         
-        // Service app timer
-        while self.timer.poll().is_some() {
-            self.seconds_lapsed += 1;
-        }
-
         self.render_top_panel(ctx, frame);
 
         self.render_minefield(ctx, frame);
@@ -74,6 +70,11 @@ impl MinesweepRsApp {
     const HIDDEN_SPOT_COLOR: Color32 = Color32::GRAY;
 
     fn render_top_panel(&mut self, ctx: &Context, _: &mut Frame) {
+        // Service app timer
+        while self.timer.poll().is_some() {
+            self.seconds_lapsed += 1;
+        }
+                
         // define a TopBottomPanel widget
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.add_space(10.);
