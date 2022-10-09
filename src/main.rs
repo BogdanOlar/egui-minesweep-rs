@@ -132,10 +132,10 @@ impl MinesweepRsApp {
                             RichText::new("Flags").text_style(TextStyle::Body)
                         ));
 
-                        let flag_count_color = if (self.minefield.mines() as i32 - self.placed_flags) >= 0 { Self::FLAG_COUNT_OK_COLOR } else { Self::FLAG_COUNT_ERR_COLOR };
+                        let flag_count_color = if self.minefield.mines() as i32 >= self.placed_flags { Self::FLAG_COUNT_OK_COLOR } else { Self::FLAG_COUNT_ERR_COLOR };
                         ui.add(
                             Label::new(
-                                RichText::new(format!("{}", self.minefield.mines() as i32 - self.placed_flags))
+                                RichText::new(format!("{}", self.placed_flags))
                                 .color(flag_count_color)
                                 .monospace()
                                 .text_style(TextStyle::Heading)
