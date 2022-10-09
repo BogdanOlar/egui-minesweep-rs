@@ -175,8 +175,7 @@ impl Minefield {
                             .filter(|i| {
                                 self.field[*i].state == SpotState::Flagged
                             })
-                            .map(|_| 1)
-                            .sum();
+                            .count() as i32;
                         
                         if n == flag_count {
                             step_result = StepResult::Phew;
