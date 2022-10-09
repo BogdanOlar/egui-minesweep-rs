@@ -5,6 +5,9 @@ use eframe::{
 };
 use egui_extras::{TableBuilder, Size};
 use minefield::{Minefield, SpotState, StepResult, SpotKind};
+use std::sync::mpsc::{channel, Receiver};
+use chrono::Duration;
+use timer::{Timer, Guard};
 
 mod minefield;
 
@@ -32,8 +35,8 @@ fn main() {
 struct MinesweepRsApp {
     minefield: Minefield,
     placed_flags: i32,
+    timer: AppTimer,
     seconds_lapsed: i32,
-    seconds_frame: f32,
     game_state: GameState,
 }
 
@@ -42,6 +45,11 @@ impl App for MinesweepRsApp {
         ctx.request_repaint();
         ctx.set_debug_on_hover(false);
         
+        // Service app timer
+        while self.timer.poll().is_some() {
+            self.seconds_lapsed += 1;
+        }
+
         self.render_top_panel(ctx, frame);
 
         self.render_minefield(ctx, frame);
@@ -88,7 +96,7 @@ impl MinesweepRsApp {
                         self.minefield = Minefield::new(width, height).with_mines(mines);
                         self.placed_flags = 0;
                         self.seconds_lapsed = 0;
-                        self.seconds_frame = 0.0;
+                        self.timer = AppTimer::default();
                         self.game_state = GameState::Ready;
                     }
                     
@@ -344,6 +352,7 @@ impl MinesweepRsApp {
 
     fn game_over(&mut self) {
         self.game_state = GameState::Stopped(false);
+        self.timer.stop();
         // TODO: show statistics
 
         println!("Running->Stopped (lost)");
@@ -352,8 +361,7 @@ impl MinesweepRsApp {
     fn check_ready_to_running(&mut self) {
         if self.game_state == GameState::Ready {
             self.game_state = GameState::Running;
-            // TODO: start timer
-
+            self.timer.start();
             println!("Ready->Running");
         }
     }
@@ -361,17 +369,9 @@ impl MinesweepRsApp {
     fn check_running_to_stopped(&mut self) {
         if self.game_state == GameState::Running && self.minefield.is_cleared() {
             self.game_state = GameState::Stopped(true);
+            self.timer.stop();
             // TODO: show victory
             println!("Running->Stopped (won)");
-        }
-    }
-
-    fn timer_input(&mut self, seconds: f32) {
-        self.seconds_frame += seconds;
-
-        while self.seconds_frame > 1.0 {
-            self.seconds_lapsed += 1;
-            self.seconds_frame -= 1.0;
         }
     }
 }
@@ -382,8 +382,43 @@ impl Default for MinesweepRsApp {
             minefield: Minefield::new(10, 10).with_mines(10),
             placed_flags: 0,
             seconds_lapsed: 0,
-            seconds_frame: 0.0,
+            timer: AppTimer::default(),
             game_state: GameState::Ready,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct AppTimer {
+    timer: Option<Timer>,
+    guard: Option<Guard>,
+    rx: Option<Receiver<()>>
+}
+
+impl AppTimer {
+    pub fn stop(&mut self) {
+        self.guard = None;
+        self.timer = None;
+        self.rx = None;
+    }
+
+    pub fn start(&mut self) {
+        let (tx, rx) = channel();
+        let timer = Timer::new();
+        let guard = timer.schedule_repeating(Duration::seconds(1), move || {
+                tx.send(()).unwrap();
+        });
+
+        self.timer = Some(timer);
+        self.guard = Some(guard);
+        self.rx = Some(rx);
+    }    
+
+    pub fn poll(&self) -> Option<()> {
+        if let Some(rx) = &self.rx {
+            rx.try_iter().next()
+        } else {
+            None
         }
     }
 }
