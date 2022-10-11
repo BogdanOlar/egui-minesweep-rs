@@ -3,7 +3,7 @@
 
 A rust implementation of the popular game, using the [egui](https://github.com/emilk/egui) library.
 
-## Bcreenshot
+## Screenshot
 <img src=".github/Screenshot.png" alt="Minesweep-Rs" />
 
 ## Build & run
