@@ -276,16 +276,19 @@ impl MinesweepRsApp {
                             self.check_ready_to_running();
                             
                             if self.minefield.step(x, y) == StepResult::Boom {
-                                self.game_over();
-                            } else {
-                                self.check_running_to_stopped();
+                                self.game_over(false);
+                            } else if self.minefield.is_cleared() {
+                                self.game_over(true);
                             }
                         }
 
                         if hidden_btn.clicked_by(PointerButton::Secondary) {
                             self.check_ready_to_running();
                             self.placed_flags += self.minefield.toggle_flag(x, y);
-                            self.check_running_to_stopped();
+
+                            if self.minefield.is_cleared() {
+                                self.game_over(true);
+                            }
                         }
                     },
                     SpotState::Revealed => {
@@ -303,9 +306,9 @@ impl MinesweepRsApp {
                                 self.check_ready_to_running();
                                 
                                 if self.minefield.try_resolve_step(x, y) == StepResult::Boom {
-                                    self.game_over();
-                                } else {
-                                    self.check_running_to_stopped();
+                                    self.game_over(false);
+                                } else if self.minefield.is_cleared() {
+                                    self.game_over(true);
                                 }
                             }
                         } else {
@@ -323,7 +326,10 @@ impl MinesweepRsApp {
 
                         if flag_btn.clicked_by(PointerButton::Secondary) {
                             self.placed_flags += self.minefield.toggle_flag(x, y);
-                            self.check_running_to_stopped();
+                            
+                            if self.minefield.is_cleared() {
+                                self.game_over(true);
+                            }
                         }                        
                     },
                     SpotState::Exploded => {
@@ -360,6 +366,8 @@ impl MinesweepRsApp {
                     SpotState::Revealed => {
                         match spot.kind() {
                             SpotKind::Mine => {
+                                // Can't have a revealed spot of mine kind. If a mine is revealed then the spot's 
+                                // state becomes `Exploded`, not `Revealed`
                                 unreachable!()
                             },
                             SpotKind::Empty(n) => {
@@ -407,6 +415,7 @@ impl MinesweepRsApp {
                                 let _ = ui.add_enabled(false, mine_btn);                                
                             },
                             SpotKind::Empty(_) => {
+                                // Only a spot of kind `Mine` can have the state `Exploded`. Anything else is a mistake
                                 unreachable!()
                             },
                         }
@@ -416,28 +425,15 @@ impl MinesweepRsApp {
         }
     }
 
-    fn game_over(&mut self) {
-        self.game_state = GameState::Stopped(false);
+    fn game_over(&mut self, is_won: bool) {
+        self.game_state = GameState::Stopped(is_won);
         self.timer.stop();
-        // TODO: show statistics
-
-        println!("Running->Stopped (lost)");
     }
 
     fn check_ready_to_running(&mut self) {
         if self.game_state == GameState::Ready {
             self.game_state = GameState::Running;
             self.timer.start();
-            println!("Ready->Running");
-        }
-    }
-
-    fn check_running_to_stopped(&mut self) {
-        if self.game_state == GameState::Running && self.minefield.is_cleared() {
-            self.game_state = GameState::Stopped(true);
-            self.timer.stop();
-            // TODO: show victory
-            println!("Running->Stopped (won)");
         }
     }
 }
