@@ -212,14 +212,14 @@ impl MinesweepRsApp {
             // Settings window
             UiToolbarGroup::Settings => {
                 Window::new("Settings").open(&mut open).show(ctx, |ui| {                    
-                    let currently_selected = GameDificulty::from_config(&self.game_config);
+                    let currently_selected = GameDifficulty::from_config(&self.game_config);
                     let mut selected = currently_selected;
                     ComboBox::from_label("Game difficulty")
                         .selected_text(format!("{:?}", selected))
                         .show_ui(ui, |ui| {
-                            ui.selectable_value(&mut selected, GameDificulty::Easy, "Easy");
-                            ui.selectable_value(&mut selected, GameDificulty::Medium, "Medium");
-                            ui.selectable_value(&mut selected, GameDificulty::Hard, "Hard");
+                            ui.selectable_value(&mut selected, GameDifficulty::Easy, "Easy");
+                            ui.selectable_value(&mut selected, GameDifficulty::Medium, "Medium");
+                            ui.selectable_value(&mut selected, GameDifficulty::Hard, "Hard");
                             // TODO: implement custom game
                             // ui.selectable_value(&mut selected, GameDificulty::Custom, "Custom");
                         }
@@ -228,16 +228,16 @@ impl MinesweepRsApp {
                     if selected != currently_selected {
                         println!("{:?} -> {:?}", currently_selected, selected);
                         match selected {
-                            GameDificulty::Easy => {
-                                self.game_config = GameDificulty::EASY;
+                            GameDifficulty::Easy => {
+                                self.game_config = GameDifficulty::EASY;
                             },
-                            GameDificulty::Medium => {
-                                self.game_config = GameDificulty::MEDIUM;
+                            GameDifficulty::Medium => {
+                                self.game_config = GameDifficulty::MEDIUM;
                             },
-                            GameDificulty::Hard => {
-                                self.game_config = GameDificulty::HARD;
+                            GameDifficulty::Hard => {
+                                self.game_config = GameDifficulty::HARD;
                             },
-                            GameDificulty::Custom => todo!(),
+                            GameDifficulty::Custom => todo!(),
                         }
                     }
 
@@ -493,20 +493,21 @@ impl MinesweepRsApp {
 
 impl Default for MinesweepRsApp {
     fn default() -> Self {
+        let game_config = GameConfig::default();
         Self {
-            minefield: Minefield::new(10, 10).with_mines(10),
+            minefield: Minefield::new(game_config.width, game_config.height).with_mines(game_config.mines),
             placed_flags: 0,
             seconds_lapsed: 0,
             timer: AppTimer::default(),
-            game_state: GameState::Ready,
-            game_config: GameConfig::default(),
+            game_state: GameState::default(),
+            game_config,
             ui_toolbar_group: UiToolbarGroup::default(),
         }
     }
 }
 
 #[derive(Default)]
-pub struct AppTimer {
+struct AppTimer {
     timer: Option<Timer>,
     guard: Option<Guard>,
     rx: Option<Receiver<()>>
@@ -542,7 +543,7 @@ impl AppTimer {
 
 /// Current state of the game
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum GameState {
+enum GameState {
     /// Game is ready to start running
     Ready,
 
@@ -551,6 +552,12 @@ pub enum GameState {
 
     /// Game is stopped, and was either won (`true`), or lost (`false`)
     Stopped(bool)
+}
+
+impl Default for GameState {
+    fn default() -> Self {
+        Self::Ready
+    }
 }
 
 enum UiToolbarGroup {
@@ -579,14 +586,14 @@ impl Default for GameConfig {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum GameDificulty {
+enum GameDifficulty {
     Easy,
     Medium,
     Hard,
     Custom,
 }
 
-impl GameDificulty {
+impl GameDifficulty {
     const EASY: GameConfig = GameConfig { width: 10, height: 10, mines: 10 };
     const MEDIUM: GameConfig = GameConfig { width: 16, height: 16, mines: 40 };
     const HARD: GameConfig = GameConfig { width: 30, height: 16, mines: 99 };
