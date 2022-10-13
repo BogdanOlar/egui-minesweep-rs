@@ -1,5 +1,5 @@
 use eframe::{
-    egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense, Direction, TopBottomPanel, Window}, 
+    egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense, Direction, TopBottomPanel, Window},
     epaint::{Color32, Vec2},
     Frame, NativeOptions, App,
 };
@@ -20,7 +20,7 @@ fn main() {
     let size_y = 44.0;
     options.initial_window_size = Some(
         Vec2::new(
-            size_x * app.minefield.width() as f32, 
+            size_x * app.minefield.width() as f32,
             size_y * app.minefield.height() as f32
         )
     );
@@ -39,19 +39,41 @@ struct MinesweepRsApp {
     timer: AppTimer,
     seconds_lapsed: i32,
     game_state: GameState,
-    show_settings: bool,
-    show_about: bool,
+    game_config: GameConfig,
+    ui_toolbar_group: UiToolbarGroup,
+}
+enum UiToolbarGroup {
+    None,
+    About,
+    Settings,
+}
+
+impl Default for UiToolbarGroup {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+struct GameConfig {
+    width: u16,
+    height: u16,
+    mines: u16,
+}
+
+impl Default for GameConfig {
+    fn default() -> Self {
+        Self { width: 10, height: 10, mines: 10 }
+    }
 }
 
 impl App for MinesweepRsApp {
     fn update(&mut self, ctx: &Context, frame: &mut Frame) {
         ctx.request_repaint();
         ctx.set_debug_on_hover(false);
-        
+
         self.render_top_panel(ctx, frame);
         self.render_bottom_panel(ctx, frame);
-        self.render_about(ctx, frame);
-        self.render_settings(ctx, frame);
+        self.render_toolbar_group(ctx, frame);
         self.render_minefield(ctx, frame);
     }
 }
@@ -66,8 +88,8 @@ impl MinesweepRsApp {
     const FLAG_COLOR_WRONG: Color32 = Color32::RED;
     const EMPTY_SPOT_CHARS: [&str; 9] = [" ", "1", "2", "3", "4", "5", "6", "7", "8"];
     const EMPTY_SPOT_COLORS: [Color32; Self::EMPTY_SPOT_CHARS.len()] = [
-        Color32::WHITE, Color32::WHITE, Color32::WHITE, 
-        Color32::WHITE, Color32::WHITE, Color32::WHITE, 
+        Color32::WHITE, Color32::WHITE, Color32::WHITE,
+        Color32::WHITE, Color32::WHITE, Color32::WHITE,
         Color32::WHITE, Color32::WHITE, Color32::WHITE
     ];
     const HIDDEN_SPOT_CHAR: &str = " ";
@@ -83,11 +105,11 @@ impl MinesweepRsApp {
         while self.timer.poll().is_some() {
             self.seconds_lapsed += 1;
         }
-                
+
         TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.add_space(10.);
             egui::menu::bar(ui, |ui| {
-                
+
                 // Config and game data
                 ui.with_layout(Layout::left_to_right(egui::Align::TOP), |ui| {
                     // refresh btn
@@ -96,21 +118,15 @@ impl MinesweepRsApp {
                             RichText::new("🔄").text_style(TextStyle::Heading),
                         )
                     );
-                    
-                    if refresh_btn.clicked() {
-                        let mines = self.minefield.mines();
-                        let width = self.minefield.width();
-                        let height = self.minefield.height();
 
-                        self.minefield = Minefield::new(width, height).with_mines(mines);
-                        self.placed_flags = 0;
-                        self.seconds_lapsed = 0;
-                        self.timer = AppTimer::default();
-                        self.game_state = GameState::Ready;
-                        self.show_about = false;
-                        self.show_settings = false;
+                    if refresh_btn.clicked() {
+                        let minefield = Minefield::new(self.game_config.width, self.game_config.height).with_mines(self.game_config.mines);
+                        *self = Self {
+                            minefield,
+                            ..Default::default()
+                        };
                     }
-                    
+
                     ui.separator();
 
                     ui.allocate_ui_with_layout(Vec2::new(10.0, 10.0), Layout::left_to_right(egui::Align::Center), |ui| {
@@ -161,6 +177,7 @@ impl MinesweepRsApp {
                 // controls
                 ui.with_layout(Layout::right_to_left(egui::Align::TOP), |ui| {
 
+                    // settings button
                     let settings_btn = ui.add(
                         Button::new(
                             RichText::new("🛠").text_style(TextStyle::Heading),
@@ -168,14 +185,22 @@ impl MinesweepRsApp {
                     );
 
                     if settings_btn.clicked() {
-                        self.show_settings = !self.show_settings;
+                        if let UiToolbarGroup::Settings = self.ui_toolbar_group {
+                            self.ui_toolbar_group = UiToolbarGroup::None;
+                        } else {
+                            self.ui_toolbar_group = UiToolbarGroup::Settings;
+                        }
                     }
 
                     // about button
                     let about_btn = ui.add(Button::new(RichText::new("ℹ").text_style(TextStyle::Heading)));
-                    
+
                     if about_btn.clicked() {
-                        self.show_about = !self.show_about;
+                        if let UiToolbarGroup::About = self.ui_toolbar_group {
+                            self.ui_toolbar_group = UiToolbarGroup::None;
+                        } else {
+                            self.ui_toolbar_group = UiToolbarGroup::About;
+                        }
                     }
                 });
             });
@@ -183,21 +208,31 @@ impl MinesweepRsApp {
         });
     }
 
-    pub fn render_settings(&mut self, ctx: &Context, _: &mut Frame) {
-        let window = Window::new("Settings").open(&mut self.show_settings);
-        window.show(ctx, |ui| {
-            let info = Label::new("TODO!");
-            ui.add(info);
-        });
-    }
+    fn render_toolbar_group(&mut self, ctx: &Context, _: &mut Frame) {
+        let mut open = true;
 
-    pub fn render_about(&mut self, ctx: &Context, _: &mut Frame) {
-        let window = Window::new("About Minesweep-Rs").open(&mut self.show_about);
-        window.show(ctx, |ui| {
-            let info = Label::new("A Rust implementation of the popular game, using the `egui` library.");
-            ui.add(info);
-            ui.hyperlink("https://github.com/BogdanOlar/minesweep-rs");
-        });
+        match self.ui_toolbar_group {
+            UiToolbarGroup::About => {
+                Window::new("Settings").open(&mut open).show(ctx, |ui| {
+                    let info = Label::new("TODO!");
+                    ui.add(info);
+                });
+            },
+
+            UiToolbarGroup::Settings => {
+                let _ = Window::new("About Minesweep-Rs").open(&mut open).show(ctx, |ui| {
+                    let info = Label::new("A Rust implementation of the popular game, using the `egui` library.");
+                    ui.add(info);
+                    ui.hyperlink("https://github.com/BogdanOlar/minesweep-rs");
+                });
+            },
+
+            UiToolbarGroup::None => {},
+        }
+
+        if !open {
+            self.ui_toolbar_group = UiToolbarGroup::None;
+        }
     }
 
     fn render_bottom_panel(&mut self, ctx: &Context, _: &mut Frame) {
@@ -213,12 +248,12 @@ impl MinesweepRsApp {
                                 .text_style(TextStyle::Monospace),
                         ));
                     },
-                    GameState::Running => {                   
+                    GameState::Running => {
                     },
                     GameState::Stopped(is_won) => {
                         if is_won {
                             ui.add(Label::new(
-                                RichText::new("You WON!")
+                                RichText::new("You WIN!")
                                     .color(Self::WON_COLOR)
                                     .text_style(TextStyle::Monospace),
                             ));
@@ -234,7 +269,7 @@ impl MinesweepRsApp {
             })
         });
     }
-    
+
     fn render_minefield(&mut self, ctx: &Context, _: &mut Frame) {
         CentralPanel::default().show(ctx, |ui| {
             let size = 30.0;
@@ -246,14 +281,14 @@ impl MinesweepRsApp {
                         body.row(size + 2.0, |mut row| {
                             for x in 0..self.minefield.width() {
                                 row.col(|ui| {
-                                    self.render_spot(x, y, size, ui);                                   
+                                    self.render_spot(x, y, size, ui);
                                 });
                             }
                         });
                     }
                 }
             );
-        });       
+        });
     }
 
     /// Render one spot/tile at the given field coordinates
@@ -268,13 +303,13 @@ impl MinesweepRsApp {
                             RichText::new(Self::HIDDEN_SPOT_CHAR)
                             .color(Self::HIDDEN_SPOT_COLOR)
                             .monospace()
-                            .size(size)                    
+                            .size(size)
                         );
                         let hidden_btn = ui.add_enabled(true, hidden_btn);
 
                         if hidden_btn.clicked_by(PointerButton::Primary) {
                             self.check_ready_to_running();
-                            
+
                             if self.minefield.step(x, y) == StepResult::Boom {
                                 self.game_over(false);
                             } else if self.minefield.is_cleared() {
@@ -304,7 +339,7 @@ impl MinesweepRsApp {
 
                             if empty_lbl.clicked_by(PointerButton::Middle) {
                                 self.check_ready_to_running();
-                                
+
                                 if self.minefield.try_resolve_step(x, y) == StepResult::Boom {
                                     self.game_over(false);
                                 } else if self.minefield.is_cleared() {
@@ -326,11 +361,11 @@ impl MinesweepRsApp {
 
                         if flag_btn.clicked_by(PointerButton::Secondary) {
                             self.placed_flags += self.minefield.toggle_flag(x, y);
-                            
+
                             if self.minefield.is_cleared() {
                                 self.game_over(true);
                             }
-                        }                        
+                        }
                     },
                     SpotState::Exploded => {
                         // Can't have exploded mine while gamestate is not `Stopped`
@@ -338,7 +373,7 @@ impl MinesweepRsApp {
                     },
                 }
             },
-            
+
             GameState::Stopped(is_won) => {
                 match spot.state() {
                     SpotState::Hidden => {
@@ -357,16 +392,16 @@ impl MinesweepRsApp {
                                     RichText::new(Self::HIDDEN_SPOT_CHAR)
                                     .color(Self::HIDDEN_SPOT_COLOR)
                                     .monospace()
-                                    .size(size)                    
+                                    .size(size)
                                 );
-                                let _ = ui.add_enabled(false, hidden_btn);                                 
+                                let _ = ui.add_enabled(false, hidden_btn);
                             },
                         }
                     },
                     SpotState::Revealed => {
                         match spot.kind() {
                             SpotKind::Mine => {
-                                // Can't have a revealed spot of mine kind. If a mine is revealed then the spot's 
+                                // Can't have a revealed spot of mine kind. If a mine is revealed then the spot's
                                 // state becomes `Exploded`, not `Revealed`
                                 unreachable!()
                             },
@@ -377,7 +412,7 @@ impl MinesweepRsApp {
                                     .monospace()
                                     .size(size)
                                 );
-                                let _ = ui.add_enabled(is_won, empty_lbl);                                   
+                                let _ = ui.add_enabled(is_won, empty_lbl);
                             },
                         }
                     },
@@ -390,7 +425,7 @@ impl MinesweepRsApp {
                                     .monospace()
                                     .size(size)
                                 );
-                                let _ = ui.add_enabled(false, flag_btn);                                
+                                let _ = ui.add_enabled(false, flag_btn);
                             },
                             SpotKind::Empty(_) => {
                                 let flag_btn = Button::new(
@@ -399,7 +434,7 @@ impl MinesweepRsApp {
                                     .monospace()
                                     .size(size)
                                 );
-                                let _ = ui.add_enabled(false, flag_btn);                                
+                                let _ = ui.add_enabled(false, flag_btn);
                             },
                         }
                     },
@@ -412,7 +447,7 @@ impl MinesweepRsApp {
                                     .monospace()
                                     .size(size)
                                 );
-                                let _ = ui.add_enabled(false, mine_btn);                                
+                                let _ = ui.add_enabled(false, mine_btn);
                             },
                             SpotKind::Empty(_) => {
                                 // Only a spot of kind `Mine` can have the state `Exploded`. Anything else is a mistake
@@ -420,7 +455,7 @@ impl MinesweepRsApp {
                             },
                         }
                     },
-                }           
+                }
             },
         }
     }
@@ -446,8 +481,8 @@ impl Default for MinesweepRsApp {
             seconds_lapsed: 0,
             timer: AppTimer::default(),
             game_state: GameState::Ready,
-            show_settings: false,
-            show_about: false,
+            game_config: GameConfig::default(),
+            ui_toolbar_group: UiToolbarGroup::default(),
         }
     }
 }
@@ -476,7 +511,7 @@ impl AppTimer {
         self.timer = Some(timer);
         self.guard = Some(guard);
         self.rx = Some(rx);
-    }    
+    }
 
     pub fn poll(&self) -> Option<()> {
         if let Some(rx) = &self.rx {
@@ -492,7 +527,7 @@ impl AppTimer {
 pub enum GameState {
     /// Game is ready to start running
     Ready,
-    
+
     /// Game is running
     Running,
 
