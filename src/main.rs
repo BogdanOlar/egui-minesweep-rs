@@ -1,5 +1,5 @@
 use eframe::{
-    egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense, Direction, TopBottomPanel, Window},
+    egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense, Direction, TopBottomPanel, Window, ComboBox},
     epaint::{Color32, Vec2},
     Frame, NativeOptions, App,
 };
@@ -24,7 +24,6 @@ fn main() {
             size_y * app.minefield.height() as f32
         )
     );
-    options.resizable = false;
 
     eframe::run_native(
         "Minesweep-Rs",
@@ -42,29 +41,6 @@ struct MinesweepRsApp {
     game_config: GameConfig,
     ui_toolbar_group: UiToolbarGroup,
 }
-enum UiToolbarGroup {
-    None,
-    About,
-    Settings,
-}
-
-impl Default for UiToolbarGroup {
-    fn default() -> Self {
-        Self::None
-    }
-}
-
-struct GameConfig {
-    width: u16,
-    height: u16,
-    mines: u16,
-}
-
-impl Default for GameConfig {
-    fn default() -> Self {
-        Self { width: 10, height: 10, mines: 10 }
-    }
-}
 
 impl App for MinesweepRsApp {
     fn update(&mut self, ctx: &Context, frame: &mut Frame) {
@@ -79,6 +55,9 @@ impl App for MinesweepRsApp {
 }
 
 impl MinesweepRsApp {
+    const REFRESH_BTN_CHAR: &str = "🔄";
+    const SETTINGS_BTN_CHAR: &str = "🛠";
+    const ABOUT_BTN_CHAR: &str = "ℹ";
     const MINE_CAHR: &str = "☢";
     const MINE_COLOR: Color32 = Color32::RED;
     const MINE_EXPLODED_CHAR: &str = "💥";
@@ -115,14 +94,16 @@ impl MinesweepRsApp {
                     // refresh btn
                     let refresh_btn = ui.add(
                         Button::new(
-                            RichText::new("🔄").text_style(TextStyle::Heading),
+                            RichText::new(Self::REFRESH_BTN_CHAR).text_style(TextStyle::Heading),
                         )
                     );
 
                     if refresh_btn.clicked() {
                         let minefield = Minefield::new(self.game_config.width, self.game_config.height).with_mines(self.game_config.mines);
+                        let game_config = self.game_config;
                         *self = Self {
                             minefield,
+                            game_config,
                             ..Default::default()
                         };
                     }
@@ -178,13 +159,11 @@ impl MinesweepRsApp {
                 ui.with_layout(Layout::right_to_left(egui::Align::TOP), |ui| {
 
                     // settings button
-                    let settings_btn = ui.add(
+                    if ui.add(
                         Button::new(
-                            RichText::new("🛠").text_style(TextStyle::Heading),
+                            RichText::new(Self::SETTINGS_BTN_CHAR).text_style(TextStyle::Heading),
                         )
-                    );
-
-                    if settings_btn.clicked() {
+                    ).clicked() {
                         if let UiToolbarGroup::Settings = self.ui_toolbar_group {
                             self.ui_toolbar_group = UiToolbarGroup::None;
                         } else {
@@ -193,9 +172,11 @@ impl MinesweepRsApp {
                     }
 
                     // about button
-                    let about_btn = ui.add(Button::new(RichText::new("ℹ").text_style(TextStyle::Heading)));
-
-                    if about_btn.clicked() {
+                    if ui.add(
+                        Button::new(
+                            RichText::new(Self::ABOUT_BTN_CHAR).text_style(TextStyle::Heading)
+                        )
+                    ).clicked() {
                         if let UiToolbarGroup::About = self.ui_toolbar_group {
                             self.ui_toolbar_group = UiToolbarGroup::None;
                         } else {
@@ -212,24 +193,61 @@ impl MinesweepRsApp {
         let mut open = true;
 
         match self.ui_toolbar_group {
+            
+            // About window
             UiToolbarGroup::About => {
-                Window::new("Settings").open(&mut open).show(ctx, |ui| {
-                    let info = Label::new("TODO!");
-                    ui.add(info);
+                Window::new("About Minesweep-Rs").open(&mut open).show(ctx, |ui| {
+                    ui.add(Label::new("MIT License"));
+                    ui.separator();
+                    ui.add(Label::new("Copyright (c) 2022 Bogdan Olar"));
+                    ui.separator();
+                    ui.hyperlink("https://github.com/BogdanOlar/minesweep-rs");
+                    ui.separator();
+                    ui.add(Label::new("Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:"));
+                    ui.add(Label::new("The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software."));
+                    ui.add(Label::new("THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.")); 
                 });
             },
 
+            // Settings window
             UiToolbarGroup::Settings => {
-                let _ = Window::new("About Minesweep-Rs").open(&mut open).show(ctx, |ui| {
-                    let info = Label::new("A Rust implementation of the popular game, using the `egui` library.");
-                    ui.add(info);
-                    ui.hyperlink("https://github.com/BogdanOlar/minesweep-rs");
-                });
+                Window::new("Settings").open(&mut open).show(ctx, |ui| {                    
+                    let currently_selected = GameDificulty::from_config(&self.game_config);
+                    let mut selected = currently_selected;
+                    ComboBox::from_label("Game difficulty")
+                        .selected_text(format!("{:?}", selected))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(&mut selected, GameDificulty::Easy, "Easy");
+                            ui.selectable_value(&mut selected, GameDificulty::Medium, "Medium");
+                            ui.selectable_value(&mut selected, GameDificulty::Hard, "Hard");
+                            // TODO: implement custom game
+                            // ui.selectable_value(&mut selected, GameDificulty::Custom, "Custom");
+                        }
+                    );
+
+                    if selected != currently_selected {
+                        println!("{:?} -> {:?}", currently_selected, selected);
+                        match selected {
+                            GameDificulty::Easy => {
+                                self.game_config = GameDificulty::EASY;
+                            },
+                            GameDificulty::Medium => {
+                                self.game_config = GameDificulty::MEDIUM;
+                            },
+                            GameDificulty::Hard => {
+                                self.game_config = GameDificulty::HARD;
+                            },
+                            GameDificulty::Custom => todo!(),
+                        }
+                    }
+
+                });                
             },
 
             UiToolbarGroup::None => {},
         }
 
+        // If the user closes whatever group window was open, make sure it's not rendered anymore
         if !open {
             self.ui_toolbar_group = UiToolbarGroup::None;
         }
@@ -533,4 +551,55 @@ pub enum GameState {
 
     /// Game is stopped, and was either won (`true`), or lost (`false`)
     Stopped(bool)
+}
+
+enum UiToolbarGroup {
+    None,
+    About,
+    Settings,
+}
+
+impl Default for UiToolbarGroup {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct GameConfig {
+    width: u16,
+    height: u16,
+    mines: u16,
+}
+
+impl Default for GameConfig {
+    fn default() -> Self {
+        Self { width: 10, height: 10, mines: 10 }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum GameDificulty {
+    Easy,
+    Medium,
+    Hard,
+    Custom,
+}
+
+impl GameDificulty {
+    const EASY: GameConfig = GameConfig { width: 10, height: 10, mines: 10 };
+    const MEDIUM: GameConfig = GameConfig { width: 16, height: 16, mines: 40 };
+    const HARD: GameConfig = GameConfig { width: 30, height: 16, mines: 99 };
+
+    fn from_config(config: &GameConfig) -> Self {
+        if *config == Self::EASY {
+            Self::Easy
+        } else if *config == Self::MEDIUM {
+            Self::Medium
+        } else if *config == Self::HARD {
+            Self::Hard
+        } else {
+            Self::Custom
+        }
+    }
 }
