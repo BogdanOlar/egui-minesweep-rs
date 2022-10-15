@@ -19,21 +19,23 @@ fn main() {
     let size_x = 38.0;
     let size_y = 44.0;
 
-    let mut options = NativeOptions::default();
-    options.initial_window_size = Some(
-        // Allocate the maximum native window size, corresponding to the HARD game difficulty
-        Vec2::new(
-            size_x * GameDifficulty::HARD.width as f32,
-            size_y * GameDifficulty::HARD.height as f32
-        )
-    );
-    options.resizable = false;
-    // FIXME: App crashes (on Fedora, with Wayland) when run with `options.run_and_return = true;` and in a `loop`
-    options.run_and_return = true;
+    let options = NativeOptions {
+        initial_window_size: Some(
+            // Allocate the maximum native window size, corresponding to the HARD game difficulty
+            Vec2::new(
+                size_x * GameDifficulty::HARD.width as f32,
+                size_y * GameDifficulty::HARD.height as f32
+            )
+        ),
+        resizable: false,
+        // FIXME: App crashes (on Fedora, with Wayland) when run with `options.run_and_return = true;` and in a `loop`
+        run_and_return: true,
+        ..Default::default()
+    };
 
     eframe::run_native(
         "Minesweep-Rs",
-        options.clone(),
+        options,
         Box::new(|cc| Box::new(MinesweepRsApp::default().with_context(cc))),
     );
 

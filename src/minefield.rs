@@ -107,7 +107,7 @@ impl Minefield {
         // Limit the max number of mines to the number of available spots
         let mines = if mines as usize <= spot_count { mines as i32 } else { spot_count as i32 };
 
-        self.mines = mines as i32;
+        self.mines = mines;
 
         // Add mines to minefield
 
@@ -291,7 +291,7 @@ impl Minefield {
 
             // update neighboring empty spots
             for neighbor_index in self.neighbor_indices(index) {
-                if let SpotKind::Empty(n) = &mut self.field[neighbor_index as usize].kind {
+                if let SpotKind::Empty(n) = &mut self.field[neighbor_index].kind {
                     // increment count of neighboring mines for this spot
                     *n += 1;
                 }
@@ -633,7 +633,7 @@ impl Minefield {
             // Y Axis
             print!("{:?} [", y);
             for x in 0..minefield.width {
-                if let Some(index) = minefield.spot_index(x as i32, y as i32) {
+                if let Some(index) = minefield.spot_index(x, y) {
                     match minefield.field[index].kind {
                         SpotKind::Mine => {
                             print!(" ☢");
@@ -666,7 +666,7 @@ impl Minefield {
             // Y Axis
             print!("{:?} [", y);
             for x in 0..minefield.width {
-                if let Some(index) = minefield.spot_index(x as i32, y as i32) {
+                if let Some(index) = minefield.spot_index(x, y) {
                     match minefield.field[index].state {
                         SpotState::Hidden => {
                             print!(" •");
