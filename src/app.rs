@@ -1,3 +1,4 @@
+
 use crate::minefield;
 use minefield::{Minefield, SpotState, StepResult, SpotKind};
 use eframe::{
@@ -10,8 +11,11 @@ use egui_extras::{TableBuilder, Size};
 use serde::{Serialize, Deserialize};
 
 // Used by desktop app
+#[cfg(not(target_arch = "wasm32"))]
 use std::{sync::mpsc::{channel, Receiver}};
+#[cfg(not(target_arch = "wasm32"))]
 use timer::{Timer, Guard};
+
 
 pub struct MinesweepRsApp {
     minefield: Minefield,
@@ -602,6 +606,7 @@ impl GameDifficulty {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Default)]
 struct AppTimer {
     timer: Option<Timer>,
@@ -609,6 +614,7 @@ struct AppTimer {
     rx: Option<Receiver<()>>
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl AppTimer {
     pub fn stop(&mut self) {
         self.guard = None;
@@ -637,4 +643,40 @@ impl AppTimer {
             None
         }
     }
+}
+
+#[cfg(target_arch = "wasm32")]
+#[derive(Default)]
+struct AppTimer {
+    // FIXME: create timer for WASM
+}
+
+#[cfg(target_arch = "wasm32")]
+impl AppTimer {
+    pub fn stop(&mut self) {
+        // TODO:
+    }
+
+    pub fn start(&mut self) {
+        // TODO:
+    }
+
+    pub fn poll(&self) -> Option<()> {
+        // TODO:
+        None
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+use eframe::wasm_bindgen::{self, prelude::*};
+
+#[cfg(target_arch = "wasm32")]
+#[wasm_bindgen]
+pub fn main_web(canvas_id: &str) {
+    use eframe::WebOptions;
+
+    tracing_wasm::set_as_global_default();
+
+    eframe::start_web(canvas_id, WebOptions::default(), Box::new(|cc| Box::new(MinesweepRsApp::default().with_context(cc))))
+        .expect("Failed to launch minesweep-rs");
 }
