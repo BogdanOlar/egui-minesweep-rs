@@ -1,4 +1,3 @@
-#[cfg(not(target_arch = "wasm32"))]
 use rand::Rng;
 
 /// Type of spot in a minefield
@@ -101,7 +100,6 @@ impl Minefield {
     }
 
     /// Build an existing minefield with the given number of mines randomly placed in it
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn with_mines(mut self, mines: u16) -> Self {
         // Total number of spots in our field
         let spot_count = self.width as usize * self.height as usize;
@@ -126,37 +124,6 @@ impl Minefield {
         for _ in 0..self.mines {
             let index_rm = rng.gen_range(0..spots_remaining.len());
             self.place_mine(spots_remaining.swap_remove(index_rm));
-        }
-
-        self
-    }
-
-    /// Build an existing minefield with the given number of mines randomly placed in it
-    #[cfg(target_arch = "wasm32")]
-    pub fn with_mines(mut self, mines: u16) -> Self {
-        // Total number of spots in our field
-        let spot_count = self.width as usize * self.height as usize;
-
-        // Limit the max number of mines to the number of available spots
-        let mines = if mines as usize <= spot_count { mines as i32 } else { spot_count as i32 };
-
-        self.mines = mines as i32;
-
-        // Add mines to minefield
-
-        // We could just start randomly picking indices in the field and hope we haven't picked them before, but if a
-        // user desires a field full of mines, then waiting for the last mines to be placed might take a long time
-        // (e.g. if the field is very large).
-        // That's a problem for an immediate GUI.
-        // So, instead, we'll use some memory in order to ensure that the user can step on a mine as soon as humanly
-        // possible.
-        // let mut spots_remaining: Vec<usize> = (0..spot_count).collect();
-        // let mut rng = rand::thread_rng();
-
-        // Place mines
-        for index in 0..self.mines as usize {
-            // FIXME: generate ranndom indices
-            self.place_mine(index);
         }
 
         self
