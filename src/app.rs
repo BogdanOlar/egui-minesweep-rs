@@ -1,5 +1,5 @@
-
 use crate::minefield;
+
 use minefield::{Minefield, SpotState, StepResult, SpotKind};
 use eframe::{
     egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense, Direction, TopBottomPanel, Window, ComboBox},
@@ -9,13 +9,15 @@ use eframe::{
 };
 use egui_extras::{TableBuilder, Size};
 use serde::{Serialize, Deserialize};
-
-// Used by desktop app
-#[cfg(not(target_arch = "wasm32"))]
 use std::{sync::mpsc::{channel, Receiver}};
+
+// Native timer
 #[cfg(not(target_arch = "wasm32"))]
 use timer::{Timer, Guard};
 
+// WASM timer
+#[cfg(target_arch = "wasm32")]
+use gloo_timers::callback::{Interval};
 
 pub struct MinesweepRsApp {
     minefield: Minefield,
@@ -71,9 +73,10 @@ impl MinesweepRsApp {
 
     pub fn with_context(mut self, cc: &CreationContext) -> Self {
         if let Some(storage) = cc.storage {
-            let prev_game_config = self.game_config;
             self.game_config = eframe::get_value(storage, Self::APP_NAME).unwrap_or_default();
-            tracing::info!("{:?} -> {:?}", prev_game_config, self.game_config);
+            tracing::debug!("Loaded config from storage {:?}", self.game_config);
+        } else {
+            tracing::debug!("No storage. Using default config {:?}", self.game_config);
         }
 
         self.minefield = Minefield::new(self.game_config.width, self.game_config.height).with_mines(self.game_config.mines);
@@ -229,7 +232,7 @@ impl MinesweepRsApp {
                     );
 
                     if selected != currently_selected {
-                        tracing::info!("\tprev: {:?} {:?}", currently_selected, game_config);
+                        tracing::debug!("\tprev {:?} {:?}", currently_selected, game_config);
 
                         match selected {
                             GameDifficulty::Easy => {
@@ -245,12 +248,12 @@ impl MinesweepRsApp {
 
                         // Save the new config into the toolbar window variant (don't apply yet!)
                         self.ui_toolbar_group = UiToolbarGroup::Settings(game_config);
-                        tracing::info!("\tnew: {:?} {:?}", selected, game_config);
+                        tracing::debug!("\tnew: {:?} {:?}", selected, game_config);
                     }
 
                     ui.with_layout(Layout::right_to_left(Align::TOP), |ui| {
                         if ui.button("Apply").clicked_by(PointerButton::Primary) {
-                            tracing::info!("\tapply: {:?}", game_config);
+                            tracing::debug!("\tapply: {:?}", game_config);
                             self.game_config = game_config;
                             self.refresh();
                         }
@@ -606,6 +609,7 @@ impl GameDifficulty {
     }
 }
 
+/// Native app timer
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Default)]
 struct AppTimer {
@@ -614,26 +618,57 @@ struct AppTimer {
     rx: Option<Receiver<()>>
 }
 
-#[cfg(not(target_arch = "wasm32"))]
+/// WASM app timer
+#[cfg(target_arch = "wasm32")]
+#[derive(Default)]
+struct AppTimer {
+    timer: Option<Interval>,
+    rx: Option<Receiver<()>>
+}
+
 impl AppTimer {
     pub fn stop(&mut self) {
-        self.guard = None;
-        self.timer = None;
-        self.rx = None;
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            self.guard = None;
+            self.timer = None;
+            self.rx = None;
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            if let Some(prev_interval) = self.timer.take() {
+                prev_interval.cancel();
+            }            
+        }
     }
 
     pub fn start(&mut self) {
-        use chrono::Duration;
-
         let (tx, rx) = channel();
-        let timer = Timer::new();
-        let guard = timer.schedule_repeating(Duration::seconds(1), move || {
-                tx.send(()).unwrap();
-        });
 
-        self.timer = Some(timer);
-        self.guard = Some(guard);
-        self.rx = Some(rx);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            use chrono::Duration;
+
+            let timer = Timer::new();
+            let guard = timer.schedule_repeating(Duration::seconds(1), move || {
+                    tx.send(()).unwrap();
+            });
+    
+            self.timer = Some(timer);
+            self.guard = Some(guard);
+            self.rx = Some(rx);
+        }
+
+        #[cfg(target_arch = "wasm32")]
+        {
+            let interval = Interval::new(1000, move || {
+                tx.send(()).unwrap();
+            }); 
+            
+            self.timer = Some(interval);
+            self.rx = Some(rx);
+        }        
     }
 
     pub fn poll(&self) -> Option<()> {
@@ -645,31 +680,11 @@ impl AppTimer {
     }
 }
 
-#[cfg(target_arch = "wasm32")]
-#[derive(Default)]
-struct AppTimer {
-    // FIXME: create timer for WASM
-}
-
-#[cfg(target_arch = "wasm32")]
-impl AppTimer {
-    pub fn stop(&mut self) {
-        // TODO:
-    }
-
-    pub fn start(&mut self) {
-        // TODO:
-    }
-
-    pub fn poll(&self) -> Option<()> {
-        // TODO:
-        None
-    }
-}
 
 #[cfg(target_arch = "wasm32")]
 use eframe::wasm_bindgen::{self, prelude::*};
 
+/// WASM entry point
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn main_web(canvas_id: &str) {
