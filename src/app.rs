@@ -692,6 +692,12 @@ pub fn main_web(canvas_id: &str) {
 
     tracing_wasm::set_as_global_default();
 
-    eframe::start_web(canvas_id, WebOptions::default(), Box::new(|cc| Box::new(MinesweepRsApp::default().with_context(cc))))
+    let options = WebOptions {
+        follow_system_theme: false,
+        default_theme: eframe::Theme::Dark,
+        ..Default::default()
+    };
+
+    eframe::start_web(canvas_id, options, Box::new(|cc| Box::new(MinesweepRsApp::default().with_context(cc))))
         .expect("Failed to launch minesweep-rs");
 }

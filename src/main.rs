@@ -30,6 +30,8 @@ fn main() {
         resizable: false,
         // FIXME: App crashes (on Fedora, with Wayland) when run with `options.run_and_return = true;` and in a `loop`
         run_and_return: true,
+        follow_system_theme: false,
+        default_theme: eframe::Theme::Dark,
         ..Default::default()
     };
 
