@@ -9,7 +9,7 @@ use eframe::{
 };
 use egui_extras::{TableBuilder, Size};
 use serde::{Serialize, Deserialize};
-use std::{sync::mpsc::{channel, Receiver}};
+use std::sync::mpsc::{channel, Receiver};
 
 // Native timer
 #[cfg(not(target_arch = "wasm32"))]
@@ -17,7 +17,7 @@ use timer::{Timer, Guard};
 
 // WASM timer
 #[cfg(target_arch = "wasm32")]
-use gloo_timers::callback::{Interval};
+use gloo_timers::callback::Interval;
 
 pub struct MinesweepRsApp {
     minefield: Minefield,
