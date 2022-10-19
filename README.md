@@ -48,9 +48,9 @@ The app should be available on [localhost port 3000](http://127.0.0.1:3000)
 
 - [X] Linux
 - [X] WASM
-
-- [ ] `egui` layout
 - [X] Config
+- [ ] High scores
+- [ ] Layout
 
 ## License
 
