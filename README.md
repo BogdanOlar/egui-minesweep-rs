@@ -19,6 +19,8 @@ cargo run --release
 
 ### Wasm
 
+[Try it out!](https://minesweep-rs.pages.dev/)
+
 Prerequisites: execute the setup script before the first build
 
 ```bash
