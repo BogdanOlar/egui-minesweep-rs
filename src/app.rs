@@ -21,7 +21,7 @@ use gloo_timers::callback::Interval;
 
 pub struct MinesweepRsApp {
     minefield: Minefield,
-    placed_flags: i32,
+    placed_flags: u32,
     timer: AppTimer,
     seconds_lapsed: i32,
     game_state: GameState,
@@ -136,7 +136,7 @@ impl MinesweepRsApp {
                             RichText::new("Flags").text_style(TextStyle::Body)
                         ));
 
-                        let flag_count_color = if self.minefield.mines() as i32 >= self.placed_flags { Self::FLAG_COUNT_OK_COLOR } else { Self::FLAG_COUNT_ERR_COLOR };
+                        let flag_count_color = if self.minefield.mines() >= self.placed_flags { Self::FLAG_COUNT_OK_COLOR } else { Self::FLAG_COUNT_ERR_COLOR };
                         ui.add(
                             Label::new(
                                 RichText::new(format!("{}", self.placed_flags))
@@ -360,8 +360,13 @@ impl MinesweepRsApp {
 
                         if hidden_btn.clicked_by(PointerButton::Secondary) {
                             self.check_ready_to_running();
-                            self.placed_flags += self.minefield.toggle_flag(x, y);
-
+                            
+                            match self.minefield.toggle_flag(x, y) {
+                                minefield::FlagToggleResult::Removed => self.placed_flags -= 1,
+                                minefield::FlagToggleResult::Added => self.placed_flags += 1,
+                                minefield::FlagToggleResult::None => {},
+                            }
+                            
                             if self.minefield.is_cleared() {
                                 self.game_over(true);
                             }
@@ -401,7 +406,11 @@ impl MinesweepRsApp {
                         let flag_btn = ui.add_enabled(true, flag_btn);
 
                         if flag_btn.clicked_by(PointerButton::Secondary) {
-                            self.placed_flags += self.minefield.toggle_flag(x, y);
+                            match self.minefield.toggle_flag(x, y) {
+                                minefield::FlagToggleResult::Removed => self.placed_flags -= 1,
+                                minefield::FlagToggleResult::Added => self.placed_flags += 1,
+                                minefield::FlagToggleResult::None => {},
+                            }
 
                             if self.minefield.is_cleared() {
                                 self.game_over(true);

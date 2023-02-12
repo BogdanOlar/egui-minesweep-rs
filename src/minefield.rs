@@ -1,67 +1,5 @@
 use rand::Rng;
 
-/// Type of spot in a minefield
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum SpotKind {
-    /// This spot is a mine
-    Mine,
-
-    /// This is an empty spot, surrounded by `N` mines
-    Empty(u32),
-}
-
-/// State of the spot in a minefield
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum SpotState {
-    /// This spot has not been visited
-    Hidden,
-
-    /// This spot has been visited
-    Revealed,
-
-    /// This spot has been flagged as being a mine
-    Flagged,
-
-    /// This spot is an exploded mine
-    Exploded,
-}
-
-/// Spot struct describing the characteristics of the minefield at a particular position
-#[derive(Copy, Clone, Debug)]
-pub struct Spot {
-    kind: SpotKind,
-    state: SpotState,
-}
-
-impl Spot {
-    pub fn kind(&self) -> SpotKind {
-        self.kind
-    }
-
-    pub fn state(&self) -> SpotState {
-        self.state
-    }
-}
-
-impl Default for Spot {
-    fn default() -> Self {
-        Self { kind: SpotKind::Empty(0), state: SpotState::Hidden }
-    }
-}
-
-/// The result of steppin on a spot in the minefield
-#[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub enum StepResult {
-    /// Stepped on empty spot
-    Phew,
-
-    /// Stepped on a mine
-    Boom,
-
-    /// Step not taken
-    Invalid
-}
-
 /// The characteristics of the minefield
 #[derive(Clone, Debug)]
 pub struct Minefield {
@@ -230,31 +168,31 @@ impl Minefield {
         true
     }
 
-    /// Set a flag on a hidden spot (return `1`), or clear the flag if the spot had one (return `-1`), or do nothing if
-    /// the spot cannot be flagged (return `0`)
-    pub fn toggle_flag(&mut self, x: u16, y: u16) -> i32 {
+    /// Set a flag on a hidden spot, or clear the flag if the spot had one, or do nothing if
+    /// the spot cannot be flagged
+    pub fn toggle_flag(&mut self, x: u16, y: u16) -> FlagToggleResult {
         if let Some(mut spot) = self.spot_mut(x, y) {
             match spot.state {
                 SpotState::Hidden => {
                     spot.state = SpotState::Flagged;
                     
                     // we've added a flag
-                    1
+                    FlagToggleResult::Added
                 },
                 SpotState::Flagged => {
                     spot.state = SpotState::Hidden;
 
                     // we've removed a flag
-                    -1
+                    FlagToggleResult::Removed
                 },
                 _ => {
                     // no flag was added or removed
-                    0
+                    FlagToggleResult::None
                 },
             }
         } else {
             // invalid coordinates, no flag was added or removed
-            0
+            FlagToggleResult::None
         }
     }
 
@@ -269,8 +207,8 @@ impl Minefield {
     }
 
     /// The number of mines in the minefield
-    pub fn mines(&self) -> u16 {
-        self.mines as u16
+    pub fn mines(&self) -> u32 {
+        self.mines
     }    
 
     /// Get a reference to a spot at the given coordinates in the minefield
@@ -333,6 +271,79 @@ impl Minefield {
                 !(*neighbor_x == x && *neighbor_y == y)
             })       
     }
+}
+
+/// Type of spot in a minefield
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum SpotKind {
+    /// This spot is a mine
+    Mine,
+
+    /// This is an empty spot, surrounded by `N` mines
+    Empty(u32),
+}
+
+/// State of the spot in a minefield
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum SpotState {
+    /// This spot has not been visited
+    Hidden,
+
+    /// This spot has been visited
+    Revealed,
+
+    /// This spot has been flagged as being a mine
+    Flagged,
+
+    /// This spot is an exploded mine
+    Exploded,
+}
+
+/// Spot struct describing the characteristics of the minefield at a particular position
+#[derive(Copy, Clone, Debug)]
+pub struct Spot {
+    kind: SpotKind,
+    state: SpotState,
+}
+
+impl Spot {
+    pub fn kind(&self) -> SpotKind {
+        self.kind
+    }
+
+    pub fn state(&self) -> SpotState {
+        self.state
+    }
+}
+
+impl Default for Spot {
+    fn default() -> Self {
+        Self { kind: SpotKind::Empty(0), state: SpotState::Hidden }
+    }
+}
+
+/// The result of steppin on a spot in the minefield
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum StepResult {
+    /// Stepped on empty spot
+    Phew,
+
+    /// Stepped on a mine
+    Boom,
+
+    /// Step not taken
+    Invalid
+}
+
+/// The result of toggling a flag in the mine field
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
+pub enum FlagToggleResult {
+    /// Exstng flag was removed
+    Removed,
+    /// A flag was added
+    Added,
+    /// No flag placed or removed
+    None
 }
 
  #[cfg(test)]
