@@ -114,7 +114,7 @@ impl Minefield {
     }
 
     /// Automatically step on all hidden neighbors (i.e. not flagged) of a revealed spot at the given coordiantes
-    pub fn try_resolve_step(&mut self, x: u16, y: u16) -> StepResult {
+    pub fn auto_step(&mut self, x: u16, y: u16) -> StepResult {
         if let Some(spot) = self.spot(x, y) {
             if let SpotKind::Empty(mines) = spot.kind {
                 // count the flags around the given coords

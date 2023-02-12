@@ -386,7 +386,7 @@ impl MinesweepRsApp {
                             if empty_lbl.clicked_by(PointerButton::Middle) {
                                 self.check_ready_to_running();
 
-                                if self.minefield.try_resolve_step(x, y) == StepResult::Boom {
+                                if self.minefield.auto_step(x, y) == StepResult::Boom {
                                     self.game_over(false);
                                 } else if self.minefield.is_cleared() {
                                     self.game_over(true);
