@@ -575,7 +575,7 @@ impl Default for UiToolbarGroup {
 pub struct GameConfig {
     pub width: u16,
     pub height: u16,
-    pub mines: u16,
+    pub mines: u32,
 }
 
 impl Default for GameConfig {
