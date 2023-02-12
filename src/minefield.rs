@@ -3,6 +3,7 @@ use rand::Rng;
 /// The characteristics of the minefield
 #[derive(Clone, Debug)]
 pub struct Minefield {
+    /// The mine field
     field: Vec<Vec<Spot>>,
 
     /// Number of mines in the field
@@ -112,7 +113,7 @@ impl Minefield {
         }
     }
 
-    /// Automatically step on all hidden neighbors (i.e. not flagged) of a revealed spot
+    /// Automatically step on all hidden neighbors (i.e. not flagged) of a revealed spot at the given coordiantes
     pub fn try_resolve_step(&mut self, x: u16, y: u16) -> StepResult {
         if let Some(spot) = self.spot(x, y) {
             if let SpotKind::Empty(mines) = spot.kind {
@@ -147,8 +148,8 @@ impl Minefield {
 
     /// Check if the minefield has been cleared
     pub fn is_cleared(&self) -> bool {
-        for spot_row in &self.field {
-            for spot in spot_row {
+        for col in &self.field {
+            for spot in col {
                 // All mines must be flagged, and all other spots must be revealed
                 match spot.kind {
                     SpotKind::Mine => {
@@ -220,7 +221,7 @@ impl Minefield {
         }
     }
 
-    /// Get a reference to a spot at the given coordinates in the minefield
+    /// Get a mutable reference to a spot at the given coordinates in the minefield
     fn spot_mut(&mut self, x: u16, y: u16) -> Option<&mut Spot> {
         if (x < self.width) && (y < self.height) {
             Some(&mut self.field[x as usize][y as usize])
@@ -229,7 +230,7 @@ impl Minefield {
         }
     }    
 
-    /// Place a mine at a given field index, and update neighboring spots
+    /// Place a mine at a given field coordiantes, and update neighboring spots
     fn place_mine(&mut self, x: u16, y: u16) {
         let spot = &mut self.field[x as usize][y as usize];
 
@@ -250,6 +251,7 @@ impl Minefield {
         }
     }
 
+    /// Iterator over the coordinates of all neighbors in a range of 1 unit, relative to the given coordiantes
     fn neighbors_coords(&self, x: u16, y: u16) -> impl Iterator<Item = (u16, u16)>
     {        
         let min_x = if x > 0 {x - 1} else {x};
@@ -363,8 +365,8 @@ pub enum FlagToggleResult {
         let height = 4;
         let minefield = Minefield::new(width, height);
 
-        for spot_row in &minefield.field {
-            for spot in spot_row {
+        for col in &minefield.field {
+            for spot in col {
                 assert_eq!(spot.kind, SpotKind::Empty(0));
                 assert_eq!(spot.state, SpotState::Hidden);
             }
