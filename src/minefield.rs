@@ -127,7 +127,7 @@ impl Minefield {
                 if spot.state == SpotState::Revealed  && placed_flags == mines {
                     for (nx, ny) in self.neighbors_coords(x, y) {
                         if SpotState::Hidden == self.field[nx as usize][ny as usize].state {
-                            let step_result = self.step(nx as u16, ny as u16);
+                            let step_result = self.step(nx, ny);
 
                             // Stepped on an unflagged mine!
                             if step_result != StepResult::Phew {
