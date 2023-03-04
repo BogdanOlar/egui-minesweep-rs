@@ -84,9 +84,9 @@ impl Minefield {
 
                     // flood reveal if this is an empty spot with no neighboring mines
                     if n == 0 {
-                        let mut neighbors_to_visit = vec![(x, y)];
+                        let mut spots_to_visit = vec![(x, y)];
 
-                        while let Some((xx, yy)) = neighbors_to_visit.pop() {                            
+                        while let Some((xx, yy)) = spots_to_visit.pop() {                            
                             for (nb_x, nb_y) in self.neighbors_coords(xx, yy) {
                                 let spot = &mut self.field[nb_x as usize][nb_y as usize];
                                 
@@ -95,7 +95,7 @@ impl Minefield {
                                         spot.state = SpotState::Revealed;
 
                                         if n == 0 {
-                                            neighbors_to_visit.push((nb_x, nb_y));
+                                            spots_to_visit.push((nb_x, nb_y));
                                         }   
                                     }                                
                                 }
