@@ -1,6 +1,5 @@
-use crate::minefield;
+use minefield_rs::{Minefield, SpotState, StepResult, FlagToggleResult};
 
-use minefield::{Minefield, SpotState, StepResult, SpotKind};
 use eframe::{
     egui::{PointerButton, self, Layout, Label, RichText, Button, Context, TextStyle, Ui, CentralPanel, Sense, Direction, TopBottomPanel, Window, ComboBox},
     epaint::{Color32, Vec2},
@@ -46,7 +45,7 @@ impl App for MinesweepRsApp {
 }
 
 impl MinesweepRsApp {
-    const APP_NAME: &str = "minesweep-rs";
+    const APP_NAME: &str = "egui minesweep-rs";
     const REFRESH_BTN_CHAR: &str = "🔄";
     const SETTINGS_BTN_CHAR: &str = "🛠";
     const ABOUT_BTN_CHAR: &str = "ℹ";
@@ -338,8 +337,8 @@ impl MinesweepRsApp {
 
         match self.game_state {
             GameState::Ready | GameState::Running => {
-                match spot.state() {
-                    SpotState::Hidden => {
+                match spot.state {
+                    SpotState::HiddenEmpty { neighboring_mines: _ } | SpotState::HiddenMine => {
                         let hidden_btn = Button::new(
                             RichText::new(Self::HIDDEN_SPOT_CHAR)
                             .color(Self::HIDDEN_SPOT_COLOR)
@@ -362,9 +361,9 @@ impl MinesweepRsApp {
                             self.check_ready_to_running();
                             
                             match self.minefield.toggle_flag(x, y) {
-                                minefield::FlagToggleResult::Removed => self.placed_flags -= 1,
-                                minefield::FlagToggleResult::Added => self.placed_flags += 1,
-                                minefield::FlagToggleResult::None => {},
+                                FlagToggleResult::Removed => self.placed_flags -= 1,
+                                FlagToggleResult::Added => self.placed_flags += 1,
+                                FlagToggleResult::None => {},
                             }
                             
                             if self.minefield.is_cleared() {
@@ -372,31 +371,7 @@ impl MinesweepRsApp {
                             }
                         }
                     },
-                    SpotState::Revealed => {
-                        if let SpotKind::Empty(n) = spot.kind() {
-                            let empty_lbl = Label::new(
-                                RichText::new(Self::EMPTY_SPOT_CHARS[n as usize])
-                                .color(Self::EMPTY_SPOT_COLORS[n as usize])
-                                .monospace()
-                                .size(size)
-                            );
-
-                            let empty_lbl = ui.add_enabled(true, empty_lbl.sense(Sense::click()));
-
-                            if empty_lbl.clicked_by(PointerButton::Middle) {
-                                self.check_ready_to_running();
-
-                                if self.minefield.auto_step(x, y) == StepResult::Boom {
-                                    self.game_over(false);
-                                } else if self.minefield.is_cleared() {
-                                    self.game_over(true);
-                                }
-                            }
-                        } else {
-                            unreachable!()
-                        }
-                    },
-                    SpotState::Flagged => {
+                    SpotState::FlaggedEmpty { neighboring_mines: _ } | SpotState::FlaggedMine => {
                         let flag_btn = Button::new(
                             RichText::new(Self::FLAG_CHAR)
                             .color(Self::FLAG_COLOR_CORRECT)
@@ -407,9 +382,9 @@ impl MinesweepRsApp {
 
                         if flag_btn.clicked_by(PointerButton::Secondary) {
                             match self.minefield.toggle_flag(x, y) {
-                                minefield::FlagToggleResult::Removed => self.placed_flags -= 1,
-                                minefield::FlagToggleResult::Added => self.placed_flags += 1,
-                                minefield::FlagToggleResult::None => {},
+                                FlagToggleResult::Removed => self.placed_flags -= 1,
+                                FlagToggleResult::Added => self.placed_flags += 1,
+                                FlagToggleResult::None => {},
                             }
 
                             if self.minefield.is_cleared() {
@@ -417,93 +392,82 @@ impl MinesweepRsApp {
                             }
                         }
                     },
-                    SpotState::Exploded => {
-                        // Can't have exploded mine while gamestate is not `Stopped`
+
+                    SpotState::RevealedEmpty { neighboring_mines } => {
+                        let empty_lbl = Label::new(
+                            RichText::new(Self::EMPTY_SPOT_CHARS[neighboring_mines as usize])
+                            .color(Self::EMPTY_SPOT_COLORS[neighboring_mines as usize])
+                            .monospace()
+                            .size(size)
+                        );
+
+                        let empty_lbl = ui.add_enabled(true, empty_lbl.sense(Sense::click()));
+
+                        if empty_lbl.clicked_by(PointerButton::Middle) {
+                            self.check_ready_to_running();
+
+                            if self.minefield.auto_step(x, y) == StepResult::Boom {
+                                self.game_over(false);
+                            } else if self.minefield.is_cleared() {
+                                self.game_over(true);
+                            }
+                        }
+                    },
+                    SpotState::ExplodedMine => {
                         unreachable!()
                     },
                 }
             },
 
             GameState::Stopped(is_won) => {
-                match spot.state() {
-                    SpotState::Hidden => {
-                        match spot.kind() {
-                            SpotKind::Mine => {
-                                let mine_btn = Button::new(
-                                    RichText::new(Self::MINE_CAHR)
-                                    .color(Self::MINE_COLOR)
-                                    .monospace()
-                                    .size(size)
-                                );
-                                let _ = ui.add_enabled(false, mine_btn);
-                            },
-                            SpotKind::Empty(_) => {
-                                let hidden_btn = Button::new(
-                                    RichText::new(Self::HIDDEN_SPOT_CHAR)
-                                    .color(Self::HIDDEN_SPOT_COLOR)
-                                    .monospace()
-                                    .size(size)
-                                );
-                                let _ = ui.add_enabled(false, hidden_btn);
-                            },
-                        }
+                match spot.state {
+                    SpotState::HiddenEmpty { neighboring_mines: _ } => {
+                        let _ = ui.add_enabled(false, Button::new(
+                            RichText::new(Self::HIDDEN_SPOT_CHAR)
+                            .color(Self::HIDDEN_SPOT_COLOR)
+                            .monospace()
+                            .size(size)
+                        ));                        
                     },
-                    SpotState::Revealed => {
-                        match spot.kind() {
-                            SpotKind::Mine => {
-                                // Can't have a revealed spot of mine kind. If a mine is revealed then the spot's
-                                // state becomes `Exploded`, not `Revealed`
-                                unreachable!()
-                            },
-                            SpotKind::Empty(n) => {
-                                let empty_lbl = Label::new(
-                                    RichText::new(Self::EMPTY_SPOT_CHARS[n as usize])
-                                    .color(Self::EMPTY_SPOT_COLORS[n as usize])
-                                    .monospace()
-                                    .size(size)
-                                );
-                                let _ = ui.add_enabled(is_won, empty_lbl);
-                            },
-                        }
+                    SpotState::HiddenMine => {
+                        let _ = ui.add_enabled(false, Button::new(
+                            RichText::new(Self::MINE_CAHR)
+                            .color(Self::MINE_COLOR)
+                            .monospace()
+                            .size(size)
+                        ));
                     },
-                    SpotState::Flagged => {
-                        match spot.kind() {
-                            SpotKind::Mine => {
-                                let flag_btn = Button::new(
-                                    RichText::new(Self::FLAG_CHAR)
-                                    .color(Self::FLAG_COLOR_CORRECT)
-                                    .monospace()
-                                    .size(size)
-                                );
-                                let _ = ui.add_enabled(false, flag_btn);
-                            },
-                            SpotKind::Empty(_) => {
-                                let flag_btn = Button::new(
-                                    RichText::new(Self::FLAG_CHAR)
-                                    .color(Self::FLAG_COLOR_WRONG)
-                                    .monospace()
-                                    .size(size)
-                                );
-                                let _ = ui.add_enabled(false, flag_btn);
-                            },
-                        }
+                    SpotState::FlaggedEmpty { neighboring_mines: _ } => {
+                        let _ = ui.add_enabled(false, Button::new(
+                            RichText::new(Self::FLAG_CHAR)
+                            .color(Self::FLAG_COLOR_WRONG)
+                            .monospace()
+                            .size(size)
+                        ));
                     },
-                    SpotState::Exploded => {
-                        match spot.kind() {
-                            SpotKind::Mine => {
-                                let mine_btn = Button::new(
-                                    RichText::new(Self::MINE_EXPLODED_CHAR)
-                                    .color(Self::MINE_EPLODED_COLOR)
-                                    .monospace()
-                                    .size(size)
-                                );
-                                let _ = ui.add_enabled(false, mine_btn);
-                            },
-                            SpotKind::Empty(_) => {
-                                // Only a spot of kind `Mine` can have the state `Exploded`. Anything else is a mistake
-                                unreachable!()
-                            },
-                        }
+                    SpotState::FlaggedMine => {
+                        let _ = ui.add_enabled(false, Button::new(
+                            RichText::new(Self::FLAG_CHAR)
+                            .color(Self::FLAG_COLOR_CORRECT)
+                            .monospace()
+                            .size(size)
+                        ));
+                    },
+                    SpotState::RevealedEmpty { neighboring_mines } => {
+                        let _ = ui.add_enabled(is_won, Label::new(
+                            RichText::new(Self::EMPTY_SPOT_CHARS[neighboring_mines as usize])
+                            .color(Self::EMPTY_SPOT_COLORS[neighboring_mines as usize])
+                            .monospace()
+                            .size(size)
+                        ));
+                    },
+                    SpotState::ExplodedMine => {
+                        let _ = ui.add_enabled(false, Button::new(
+                            RichText::new(Self::MINE_EXPLODED_CHAR)
+                            .color(Self::MINE_EPLODED_COLOR)
+                            .monospace()
+                            .size(size)
+                        ));
                     },
                 }
             },
@@ -708,5 +672,5 @@ pub fn main_web(canvas_id: &str) {
     };
 
     eframe::start_web(canvas_id, options, Box::new(|cc| Box::new(MinesweepRsApp::default().with_context(cc))))
-        .expect("Failed to launch minesweep-rs");
+        .expect("Failed to launch egui-minesweep-rs");
 }

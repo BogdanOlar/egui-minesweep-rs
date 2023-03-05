@@ -1,5 +1,4 @@
 pub mod app;
-pub mod minefield;
 
 use std::env;
 use eframe::{NativeOptions, epaint::Vec2};
@@ -36,7 +35,7 @@ fn main() {
     };
 
     eframe::run_native(
-        "Minesweep-Rs",
+        "Egui Minesweep-Rs",
         options,
         Box::new(|cc| Box::new(MinesweepRsApp::default().with_context(cc))),
     );
